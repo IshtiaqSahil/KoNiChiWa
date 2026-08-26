@@ -12,9 +12,10 @@ same in parallel — coordinate through this repo, not tribal knowledge.
 
 ## The Idea
 
-Full spec: [`ULTIMATE_AI_AGENT_TRUST_PLATFORM_EN.md`](./ULTIMATE_AI_AGENT_TRUST_PLATFORM_EN.md)
+Summary below (the full detailed proposal doc is kept locally, not in
+this repo — ask a teammate if you need it).
 
-One-paragraph summary: we're building an AI Agent Trust/Certification
+We're building an AI Agent Trust/Certification
 platform that evaluates candidate AI agents (e.g. payment/DeFi agents) for
 safety and reliability, then records the results on-chain. Three pillars:
 
