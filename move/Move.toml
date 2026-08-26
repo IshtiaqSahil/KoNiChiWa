@@ -1,0 +1,14 @@
+[package]
+name = "konichiwa"
+edition = "2024.beta"
+
+# TODO: pin to a specific Sui framework rev once someone with the Sui CLI
+# installed runs `sui move new` for real and confirms the right rev for
+# testnet (design/PRE_PRODUCTION_DECISIONS_EN.md section 1 - network is
+# "Testnet, confirm"). Not built/tested here - no `sui` binary in this
+# environment.
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet" }
+
+[addresses]
+konichiwa = "0x0"
