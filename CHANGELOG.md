@@ -14,6 +14,25 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-27 21:15 — Wire up root .env loading, set up team Supabase project (Sahil)
+Set up a Supabase project for the team (`fgcuzvrtgxgoqkijswpm`) and ran
+`backend/supabase/schema.sql` against it. Filled `.env` (local, gitignored)
+with the project URL + anon + service_role keys.
+
+Found neither service actually read a root-level `.env`: no `dotenv` in
+`backend`, and Vite only reads env files from its own directory
+(`frontend/`) by default, not the monorepo root where `.env.example`
+lives. Fixed both without adding a dependency:
+- `frontend/vite.config.ts`: added `envDir: ".."` so Vite reads the root
+  `.env`.
+- `backend/package.json`: `dev`/`start` scripts now pass
+  `--env-file=../.env` (Node 20.6+ native flag, verified working on
+  Node 24) instead of requiring a `backend/.env`.
+
+Verified: restarted all 4 services, ran both agents through the
+dashboard — Supabase Realtime rows now stream in live during a run
+instead of the orange "not configured" fallback notice.
+
 ## 2026-08-27 19:00 — Real Sui testnet writes implemented (konosuke)
 Resolved the two remaining Sui open decisions as hackathon defaults:
 testnet SUI is free via faucet, so "who pays gas" has no real cost either
