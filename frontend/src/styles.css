@@ -1,0 +1,238 @@
+/* KoNiChiWa dashboard.
+   One stylesheet, design tokens at the top - no CSS framework, since the
+   whole UI is ~5 components and a build-time dependency would cost more to
+   explain to teammates than it saves. */
+
+:root {
+  /* Flat black, no gradient - every surface is a step of grey-black, no
+     colour tint mixed into the ground. */
+  --bg: #050506;
+  --bg-raised: #101012;
+  --bg-inset: #0a0a0b;
+  --border: #232326;
+  --border-strong: #38383c;
+
+  --text: #eaeaec;
+  --text-dim: #9a9aa0;
+  --text-faint: #66666c;
+
+  /* Cold, monochrome-leaning palette - no green/amber/red traffic light.
+     --accent is the one hue on the page; --pass/--warn/--fail are a single
+     blue scale stepping down to grey (see scoreColor.ts), and --alert is
+     the one deliberate departure, reserved for things that are genuinely
+     wrong (a failed request, a mismatched language) rather than "scored
+     low" - kept violet rather than red so it stays inside the cold family. */
+  --accent: #4c8dff;
+  --pass: #4c8dff;
+  --warn: #8b7ff5;
+  --fail: #4b4f58;
+  --alert: #b57bf2;
+  --alert-soft: rgba(181, 123, 242, 0.14);
+  --alert-border: rgba(181, 123, 242, 0.35);
+
+  --radius: 12px;
+  --radius-sm: 8px;
+
+  /* Times New Roman per request, with a serif fallback stack for platforms
+     that lack it, then the same CJK faces as before - this dashboard
+     renders Chinese and Japanese agent replies verbatim, and Times New
+     Roman has no CJK glyphs, so those characters still fall through to a
+     real CJK face rather than tofu. Numerals and ids stay on --font-mono
+     (unchanged) since a serif digit stack reads worse in a formula or a
+     scenario id than in prose. */
+  --font: "Times New Roman", Times, Georgia, "Hiragino Kaku Gothic ProN",
+    "Yu Gothic UI", "Noto Sans CJK JP", "Microsoft YaHei", "PingFang SC", serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell { max-width: 1180px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+/* --- header ---
+   Name and tagline both centered and enlarged so the masthead reads as a
+   title block rather than a toolbar; the language switch sits on top of it
+   in the corner so centering the text doesn't have to fight its width. */
+.masthead {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  padding: 1.5rem 0 1.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.wordmark { font-size: 3.2rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.wordmark span { color: var(--accent); }
+.tagline { margin: 0; color: var(--text-dim); font-size: 1.15rem; max-width: 62ch; }
+
+.locale-switch {
+  position: absolute; top: 0.15rem; right: 0;
+  display: flex; border: 1px solid var(--border-strong); border-radius: 999px; overflow: hidden;
+}
+.locale-switch button {
+  background: transparent; border: 0; color: var(--text-dim);
+  padding: 0.35rem 0.8rem; font: inherit; font-size: 0.82rem; cursor: pointer;
+}
+.locale-switch button[aria-pressed="true"] { background: var(--accent); color: #06090f; font-weight: 600; }
+
+/* --- status strip --- */
+.status-strip { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 1.75rem; }
+.chip {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0.3rem 0.75rem;
+  font-size: 0.78rem; color: var(--text-dim);
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
+.dot.on { background: var(--pass); box-shadow: 0 0 0 3px rgba(76, 141, 255, 0.18); }
+.dot.off { background: var(--warn); }
+
+/* --- agent grid --- */
+.agent-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); }
+@media (max-width: 900px) { .agent-grid { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.agent-name { margin: 0; font-size: 1.15rem; font-weight: 650; }
+.agent-note { margin: 0.2rem 0 0; color: var(--text-faint); font-size: 0.8rem; }
+
+.run-btn {
+  background: var(--accent); color: #06121c; border: 0; border-radius: var(--radius-sm);
+  padding: 0.55rem 1.05rem; font: inherit; font-weight: 600; font-size: 0.88rem; cursor: pointer;
+  white-space: nowrap;
+}
+.run-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.run-btn:disabled { opacity: 0.55; cursor: default; }
+
+/* --- progress --- */
+.progress { margin-top: 1.1rem; }
+.progress-meta { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-dim); margin-bottom: 0.4rem; }
+.progress-track { height: 5px; background: var(--bg-inset); border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 240ms ease; }
+/* Without Supabase Realtime there are no per-scenario rows to count, so a
+   percentage bar would sit at 0% for the whole run and read as "hung".
+   Sweep instead - honest about "working, count unknown". */
+.progress-fill.indeterminate { width: 35%; animation: sweep 1.3s ease-in-out infinite; transition: none; }
+@keyframes sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(286%); }
+}
+
+/* --- headline score --- */
+.headline { display: flex; align-items: center; gap: 1.25rem; margin-top: 1.25rem; }
+.dial { flex: none; }
+.headline-body { min-width: 0; }
+.tier { font-size: 1.05rem; font-weight: 650; margin: 0; }
+.tier.pass { color: var(--pass); }
+.tier.warn { color: var(--warn); }
+.tier.fail { color: var(--fail); }
+
+.formula { margin: 0.35rem 0 0; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim); }
+.formula b { color: var(--text); font-weight: 600; }
+
+/* --- metric row --- */
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-top: 1.1rem; }
+.metric { background: var(--bg-inset); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.6rem 0.7rem; }
+.metric-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
+.metric-value { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 600; margin-top: 0.1rem; }
+.metric-note { font-size: 0.68rem; color: var(--text-faint); }
+
+/* --- bars --- */
+.section-title {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-faint); margin: 1.5rem 0 0.6rem;
+}
+.bar-row { display: grid; grid-template-columns: 9.5rem 1fr 2.6rem; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; font-size: 0.83rem; }
+.bar-label { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 7px; background: var(--bg-inset); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; transition: width 300ms ease; }
+.bar-value { font-family: var(--font-mono); font-size: 0.8rem; text-align: right; color: var(--text-dim); }
+/* Alert violet rather than the score-scale grey: this is a call-out ("look
+   here"), not a restatement of a low number the bar next to it already
+   shows. */
+.bar-row.weakest .bar-label { color: var(--alert); font-weight: 600; }
+
+/* --- scenario list --- */
+.scenarios { margin-top: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.scenario {
+  display: grid; grid-template-columns: 1fr auto; gap: 0.15rem 0.75rem;
+  padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border);
+  font-size: 0.83rem; align-items: baseline;
+}
+.scenario:last-child { border-bottom: 0; }
+.scenario.pending { opacity: 0.5; }
+.scenario-id { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-faint); }
+.scenario-msg { color: var(--text); margin: 0.15rem 0 0; word-break: break-word; }
+.scenario-reply { color: var(--text-dim); margin: 0.2rem 0 0; font-size: 0.8rem; word-break: break-word; }
+.scenario-score { font-family: var(--font-mono); font-weight: 600; text-align: right; }
+
+.lang-tag {
+  display: inline-block; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em;
+  padding: 0.05rem 0.4rem; border-radius: 4px; margin-right: 0.4rem;
+  background: var(--bg-inset); border: 1px solid var(--border-strong); color: var(--text-dim);
+}
+.flag {
+  display: inline-block; font-size: 0.68rem; padding: 0.05rem 0.4rem; border-radius: 4px;
+  background: var(--alert-soft); color: var(--alert); border: 1px solid var(--alert-border);
+  margin-left: 0.4rem; white-space: nowrap;
+}
+
+.judges { grid-column: 1 / -1; margin: 0.35rem 0 0; }
+.judges summary { cursor: pointer; color: var(--text-faint); font-size: 0.75rem; list-style: none; }
+.judges summary::-webkit-details-marker { display: none; }
+.judges summary::before { content: "\25B8  "; }
+.judges[open] summary::before { content: "\25BE  "; }
+.judge { display: flex; gap: 0.6rem; padding: 0.35rem 0 0; font-size: 0.76rem; color: var(--text-dim); }
+.judge-model { font-family: var(--font-mono); color: var(--text-faint); flex: none; width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.judge-score { font-family: var(--font-mono); flex: none; width: 2.2rem; text-align: right; }
+
+/* --- certificate --- */
+.cert { margin-top: 1.25rem; padding: 0.85rem; background: var(--bg-inset); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.cert-id { font-family: var(--font-mono); font-size: 0.75rem; word-break: break-all; color: var(--text-dim); }
+.cert a { color: var(--accent); }
+.cert-mock { color: var(--warn); font-size: 0.78rem; }
+
+.error {
+  margin-top: 1rem; padding: 0.7rem 0.85rem; border-radius: var(--radius-sm);
+  background: var(--alert-soft); border: 1px solid var(--alert-border);
+  color: var(--alert); font-size: 0.84rem;
+}
+
+.footnote { margin-top: 2.5rem; color: var(--text-faint); font-size: 0.78rem; max-width: 74ch; }
+.footnote code { font-family: var(--font-mono); color: var(--text-dim); }
+
+/* --- narrow screens --- */
+/* Judges will look at this on a laptop, but a phone-width fallback costs
+   three rules and stops the bar charts collapsing to a sliver of track. */
+@media (max-width: 520px) {
+  .shell { padding: 1.25rem 0.85rem 3rem; }
+  .card { padding: 1rem; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .bar-row { grid-template-columns: 1fr 2.6rem; gap: 0.2rem 0.6rem; }
+  .bar-row .bar-track { grid-column: 1 / -1; }
+  .headline { gap: 0.9rem; }
+  /* The absolute-positioned locale switch has no room to float over a
+     3.2rem centered title at this width - drop it back into flow above the
+     title instead of overlapping it. */
+  .masthead { padding-top: 0.5rem; }
+  .locale-switch { position: static; margin-bottom: 0.75rem; }
+  .wordmark { font-size: 2.1rem; }
+  .tagline { font-size: 0.95rem; }
+}
