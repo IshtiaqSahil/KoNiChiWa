@@ -14,6 +14,70 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-28 03:50 — Real Sui testnet writes implemented, resolve gas payer/ownership decisions (Sahil)
+Full arc from "code path was silently guaranteed to fail" to verified real
+on-chain writes for both demo agents. Four distinct bugs found and fixed
+along the way, each confirmed live against testnet, not just from docs:
+
+**1. Dead JSON-RPC.** `backend/src/sui/client.ts` was built against
+`@mysten/sui/client`'s `SuiClient`, which wraps JSON-RPC - Sui Foundation
+fully decommissioned public JSON-RPC on testnet 2026-07-31 (industry-wide,
+confirmed by direct probe: every method returns "Method not found... has
+been deprecated"). Swapped to `@mysten/sui/grpc`'s `SuiGrpcClient` (already
+in the installed `@mysten/sui@1.45.2`, no new dependency), same host
+(`fullnode.testnet.sui.io:443`), gRPC-Web transport.
+
+**2. Missing sender.** The old `suiClient.signAndExecuteTransaction({ signer,
+transaction, options })` inferred the sender from `signer`. Its gRPC
+replacement, `keypair.signAndExecuteTransaction({ transaction, client })`,
+doesn't - needs `tx.setSender()` called explicitly or build fails with
+"Missing transaction sender".
+
+**3. Gas auto-resolution is unimplemented in the gRPC client.**
+`GrpcCoreClient#resolveTransactionPlugin` (`@mysten/sui`'s own
+`grpc/core.js`) unconditionally throws "Transaction resolution is not
+supported with the GRPC client" - the real logic is written but commented
+out in this SDK version. Worked around by resolving gas payment/price
+ourselves (`suiClient.core.getCoins()` + `getReferenceGasPrice()`) and
+calling `tx.setGasPayment()`/`setGasPrice()`/`setGasBudget()` before
+`tx.build()`, which sidesteps needing the plugin at all (confirmed by
+reading `transactions/resolve.js`: it only calls out to a client if gas
+config or an input is actually unresolved).
+
+**4. Buggy hardcoded `readMask` in the high-level wrapper.**
+`GrpcCoreClient#executeTransaction` sends a hardcoded `readMask.paths`
+including `"transaction.transaction"`, which the live testnet node rejects
+with "invalid read_mask path". Substituting other explicit paths pulled
+straight from the SDK's own `.d.ts` field names (e.g. `"transaction.effects"`)
+was *also* rejected - the live node's schema doesn't fully line up with
+what this SDK version's types expect. Fix: bypass the wrapper and call
+`suiClient.transactionExecutionService.executeTransaction()` (the generated
+proto client) directly, **omitting `readMask` entirely** - despite the
+proto docstring saying this defaults to `effects.status,checkpoint`, the
+live response actually came back with full effects including
+`changedObjects`, which is all `writeCertification()` needs.
+
+Also considered upgrading to `@mysten/sui@2.27.0` (latest, vs. installed
+1.45.2) in case the bug was already fixed there - reverted after confirming
+2.x is ESM-only (`.d.mts`-only exports) and would require converting all of
+`backend` to ESM (`"type": "module"`, `moduleResolution: "node16"`, ts-node-dev
+ESM loader, `.js` extensions on every relative import) to use with
+`ts-node-dev --transpile-only`'s CommonJS output. Too large a blast-radius
+change mid-hackathon for a bug fixable in three lines against the version
+already installed - noted here in case someone revisits the upgrade later.
+
+**Verified live**: both demo agents now produce real on-chain
+`AgentCertification` objects on testnet -
+SafeAgent → `0xb90b822658e580c1ba61f54c98a480a47cf13194b906eee440d3e2251285c856`
+(100/"Excellent"), YOLOAgent →
+`0xfd5bfb59df480903dfc57651d7292a32b4c80ae974778a20c91de3c39256e4c0`
+(54/"Weak"). `move/sources/trust.move` published to testnet at package id
+`0x530170f66459704437cf9c5b73ff294821a5e661845e25d8928886a09c5d1581`.
+This also resolves the two remaining Sui open decisions from
+`PRE_PRODUCTION_DECISIONS_EN.md` §1 as hackathon defaults: gas payer and
+object owner are both the backend's own keypair (funded via testnet
+faucet, free).
+
 ## 2026-08-27 23:50 — Real Gonka Router integration implemented (Sahil)
 Resolved the last open Gonka item: confirmed GonkaRouter (gonkarouter.io,
 not the broker-directory gonka.ai flow) is what the hackathon-provided key

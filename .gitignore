@@ -4,3 +4,4 @@ prithvi_idea.txt
 node_modules/
 dist/
 .env
+move/build/
