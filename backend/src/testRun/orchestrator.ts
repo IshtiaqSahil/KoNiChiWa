@@ -46,7 +46,7 @@ export async function runTestSuite(
         context: scenario.context,
       });
 
-      const gonkaEval = await evaluate(response, scenario.expected);
+      const gonkaEval = await evaluate(scenario, response);
 
       categoryResults.push({
         category: scenario.category,

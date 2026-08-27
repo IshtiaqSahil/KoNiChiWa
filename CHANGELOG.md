@@ -14,6 +14,51 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-27 23:50 — Real Gonka Router integration implemented (Sahil)
+Resolved the last open Gonka item: confirmed GonkaRouter (gonkarouter.io,
+not the broker-directory gonka.ai flow) is what the hackathon-provided key
+points at. It's OpenAI-compatible (`POST {GONKA_ROUTER_URL}/chat/completions`,
+`Authorization: Bearer`). Confirmed exact model ids from their docs:
+`moonshotai/Kimi-K2.6`, `MiniMaxAI/MiniMax-M2.7`; third slot
+(`deepseek-ai/DeepSeek-V4-Flash-0731`) has its id format inferred from the
+same convention, not confirmed against the dashboard yet.
+
+**`backend/src/gonka/router.ts`** rewritten: `evaluate()` now takes the
+full `Scenario` (not just `expected`) so the judge prompt has the actual
+user message + wallet context to reason about, not just a fixed expected
+answer to pattern-match. Each model gets a real call — a prompt asking for
+strict-JSON `{"score", "reasoning"}`, `temperature: 0`. Falls back to the
+existing deterministic heuristic stub per-model, either globally (if
+`GONKA_API_KEY`/`GONKA_ROUTER_URL` unset) or individually on any call
+failure/timeout/malformed response — same degrade-gracefully pattern as
+`sui/client.ts` and `db/persistence.ts`. `backend/src/testRun/orchestrator.ts`
+updated for the new `evaluate(scenario, response)` signature.
+
+**Timeout tuned from live testing**: `PRE_PRODUCTION_DECISIONS_EN.md` §2
+recommended 15s. Tested against the real hackathon key (18 live calls
+across 2 runs): `deepseek-ai/DeepSeek-V4-Flash-0731` was fast and reliable
+(6/6 succeeded), but `moonshotai/Kimi-K2.6` and `MiniMaxAI/MiniMax-M2.7`
+frequently exceeded 15s (5/12 timed out) — likely load on GonkaRouter
+during the hackathon, not a bug (all failures were `TimeoutError`, never
+an auth/format error, confirming the key and request shape are correct).
+Bumped to 28s, which cut the fallback rate from 5/9 to 2/9 judgments on a
+repeat run, trading ~33s/run instead of ~46s for more real (non-stub)
+judgments.
+
+**Known limitation, not fixed**: all three GonkaRouter models are
+Chinese-lineage (per `TECH_STACK_EN.md` "Corrections" #5's flag) —
+GonkaRouter doesn't offer a non-Chinese-lineage model at all, so this can't
+be resolved by picking a different Gonka model. Team decision needed on
+whether to accept it or bring in an outside model for genuine lineage
+diversity.
+
+Verified end-to-end with the real hackathon key in local `.env` (not
+committed): both SafeAgent and YOLOAgent runs against live GonkaRouter
+calls produced correct tiers (100/"Excellent" and 50-58/"Weak" depending
+on how many judgments landed real vs. stub) with real per-model reasoning
+text visible in the response. Also verified the all-stub fallback path
+still works with the key blank. Typechecked clean.
+
 ## 2026-08-27 21:15 — Wire up root .env loading, set up team Supabase project (Sahil)
 Set up a Supabase project for the team (`fgcuzvrtgxgoqkijswpm`) and ran
 `backend/supabase/schema.sql` against it. Filled `.env` (local, gitignored)
