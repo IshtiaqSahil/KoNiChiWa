@@ -10,6 +10,7 @@ export interface TestRunResult {
     overall_score: number;
     category_scores: Record<string, number>;
     model_agreement: number;
+    certification_tier: string;
   };
   certification: {
     sui_object_id: string | null;
@@ -18,10 +19,24 @@ export interface TestRunResult {
 }
 
 // /api proxies to the backend - see vite.config.ts.
-export async function runTestSuite(agentId: string): Promise<TestRunResult> {
-  const res = await fetch(`/api/test-runs/${agentId}`, { method: "POST" });
+// test_run_id is generated here (not by the backend) so the caller can
+// subscribe to Supabase Realtime for this id *before* the run starts -
+// see App.tsx.
+export async function runTestSuite(
+  agentId: string,
+  testRunId: string
+): Promise<TestRunResult> {
+  const res = await fetch(`/api/test-runs/${agentId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ test_run_id: testRunId }),
+  });
   if (!res.ok) {
     throw new Error(`Test run failed: HTTP ${res.status}`);
   }
   return res.json();
+}
+
+export function generateTestRunId(): string {
+  return `run_${crypto.randomUUID()}`;
 }

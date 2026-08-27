@@ -14,7 +14,101 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
-## 2026-08-27 15:30 — Repo skeleton scaffolded (Claude Code)
+## 2026-08-27 18:00 — Status summary doc added (konosuke)
+Added `design/STATUS_SUMMARY_EN.md` — English translation of a status
+recap given in chat (what we're building / where things stand / what's
+needed next), saved as a standalone doc for quick onboarding. No code
+changed.
+
+## 2026-08-27 17:45 — Teammate-facing implementation notes added (konosuke)
+Added `design/IMPLEMENTATION_NOTES_EN.md` so a teammate picking up the
+Supabase/Sui-SDK/certification-tier work (previous entry below) doesn't
+have to reconstruct it from the diff or the changelog: a TL;DR, exact
+Supabase project setup steps (with an explicit warning not to reuse the
+unrelated Supabase project linked in this dev environment), a data-flow
+diagram of the new client-generated-run-id + Realtime-subscribe-before-
+POST pattern, a full file map of what changed and why, an explicit list
+of what's still stubbed/blocked (unchanged), and copy-pasteable
+verification commands. Cross-linked from `WORKFLOW_EN.md`'s local dev
+loop section. No code changed.
+
+## 2026-08-27 17:20 — Built the framework for every decided stack item (konosuke)
+Implemented everything from `design/TECH_STACK_EN.md` that isn't still
+blocked on an open decision. Left untouched: real Gonka model calls/timeout
+retry (blocked on model IDs), real Sui writes (blocked on object ownership
++ gas payer), wallet operations in the demo agents (blocked/mock-by-scope),
+category weights and the agreement formula (both explicitly open).
+
+**Supabase (Postgres + Realtime)** — `backend/supabase/schema.sql`
+(`test_runs`, `scenario_results`, RLS policies, realtime publication,
+idempotent); `backend/src/db/supabaseClient.ts` + `persistence.ts`
+(service-role writes, no-op/log-only if unconfigured so test runs never
+break on a missing/unreachable Supabase project); wired into
+`backend/src/testRun/orchestrator.ts` (`startTestRun` → per-scenario
+`recordScenarioResult` → `completeTestRun`/`failTestRun`). Frontend:
+`frontend/src/supabaseClient.ts` (anon key) + `App.tsx` now generates the
+`test_run_id` client-side (`generateTestRunId()` in `api.ts`) and
+subscribes to a Realtime channel *before* triggering the run, so
+per-scenario progress rows stream in live instead of only the final HTTP
+response. **Checked first**: the Supabase project already linked via this
+environment's MCP tools belongs to an unrelated app (`groups`,
+`participants`, `spot_candidates`, ...) — did not touch it; schema is a
+file for the team to run against their own project.
+
+**Sui SDK correction applied** — `backend/src/sui/client.ts` now imports
+`@mysten/sui` (not the deprecated `@mysten/sui.js`) and constructs a real
+read-only `SuiClient` against `SUI_RPC_URL`/`SUI_NETWORK`. The actual
+on-chain *write* stays mocked, since that's still blocked on object
+ownership + gas payer.
+
+**Certification tiers** — `CERTIFICATION_TIERS` in
+`backend/src/scoring/weights.ts` + `getCertificationTier()` in `score.ts`,
+using the proposed default bands (90/75/60/40/0) from
+`PRE_PRODUCTION_DECISIONS_EN.md` §5. `TrustScore` now carries
+`certification_tier`; surfaced in the dashboard.
+
+Verified: typechecked both `backend` and `frontend` clean, then ran both
+demo agents + backend locally and hit `/test-runs/safe-agent` and
+`/test-runs/yolo-agent` directly — same 100/"Excellent" vs. 58/"Weak"
+split as before, and the backend logs no errors with Supabase
+unconfigured (confirms the no-op fallback works).
+
+Also added `frontend/src/vite-env.d.ts` (needed for `import.meta.env`
+typing) and new env vars in `.env.example`
+(`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`VITE_SUPABASE_URL`/
+`VITE_SUPABASE_ANON_KEY`). Updated `design/TECH_STACK_EN.md` status
+column for every row that moved from 🔴/🟡 to ✅ or 🟡(partial).
+
+## 2026-08-27 16:45 — Tech stack review + corrections (konosuke)
+Re-reviewed `design/TECH_STACK_EN.md` for whether each choice is actually
+optimal, not just "picked." Five corrections: (1) `@mysten/sui.js` is
+deprecated, renamed to `@mysten/sui` — updated everywhere including
+`WORKFLOW_EN.md`; (2) merged the open "Postgres vs Mongo" + "Socket.io"
+decisions into one choice, Supabase (Postgres + Realtime), since it's
+already available as a configured MCP tool in this environment and
+removes a whole hand-rolled WebSocket layer; (3) cut `@mysten/dapp-kit`
+from Must-Have — nothing in scope needs a browser wallet connection, the
+backend signs Sui txs with its own keypair, confirmed no wallet code
+exists in `frontend/src/App.tsx`; (4) dropped "LangChain wrappers" as a
+target for the demo agents — the already-built, already-verified
+hand-rolled Express agents are the better choice for a judged demo
+(deterministic, no live-LLM-call failure mode), not a stand-in to
+replace; (5) flagged (not yet fixed, blocked on real Gonka model
+availability) that the planned 3-model roster — Kimi-K2.6, MiniMax, "a
+Chinese-strong model" — has no lineage diversity, which weakens the
+cross-model-agreement trust signal the Gonka pillar depends on.
+
+## 2026-08-27 16:15 — Tech stack + workflow docs added (konosuke)
+Added `design/TECH_STACK_EN.md` (a single table of every stack choice —
+frontend, backend, demo agents, Gonka, Sui, scoring — each tagged ✅
+built / 🟡 chosen-not-built / 🔴 open decision, cross-referenced against
+what's actually in the scaffold) and `design/WORKFLOW_EN.md` (local dev
+run commands + request-flow diagram for what works today, plus a
+diagrammed build sequence for closing the remaining open decisions from
+`PRE_PRODUCTION_DECISIONS_EN.md`, ordered by the priority list there and
+the cut order in `SCOPE_FLOOR_PROPOSAL_EN.md`). No code changed.
+
+## 2026-08-27 15:30 — Repo skeleton scaffolded (konosuke)
 Built a working end-to-end skeleton so implementation can start without
 waiting on every open decision in `design/PRE_PRODUCTION_DECISIONS_EN.md`.
 Stack: Node/TS/Express `backend`, React/TS/Vite `frontend`, two Express

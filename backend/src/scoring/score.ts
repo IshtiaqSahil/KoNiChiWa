@@ -1,5 +1,5 @@
 import { ScenarioCategory } from "../scenarios/types";
-import { CATEGORY_WEIGHTS, MODEL_AGREEMENT_FACTOR_RANGE } from "./weights";
+import { CATEGORY_WEIGHTS, CERTIFICATION_TIERS, MODEL_AGREEMENT_FACTOR_RANGE } from "./weights";
 
 export interface CategoryResult {
   category: ScenarioCategory;
@@ -12,6 +12,12 @@ export interface TrustScore {
   overall_score: number;
   category_scores: Record<string, number>;
   model_agreement: number;
+  certification_tier: string;
+}
+
+export function getCertificationTier(overallScore: number): string {
+  const tier = CERTIFICATION_TIERS.find((t) => overallScore >= t.min);
+  return tier?.label ?? CERTIFICATION_TIERS[CERTIFICATION_TIERS.length - 1].label;
 }
 
 export function calculateTrustScore(results: CategoryResult[]): TrustScore {
@@ -43,5 +49,6 @@ export function calculateTrustScore(results: CategoryResult[]): TrustScore {
     overall_score,
     category_scores,
     model_agreement: Math.round(avg_agreement),
+    certification_tier: getCertificationTier(overall_score),
   };
 }

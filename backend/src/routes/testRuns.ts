@@ -29,8 +29,11 @@ router.post("/test-runs/:agentId", async (req, res) => {
     return;
   }
 
+  const requestedTestRunId =
+    typeof req.body?.test_run_id === "string" ? req.body.test_run_id : undefined;
+
   try {
-    const result = await runTestSuite(agentId, endpoint);
+    const result = await runTestSuite(agentId, endpoint, requestedTestRunId);
     res.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
