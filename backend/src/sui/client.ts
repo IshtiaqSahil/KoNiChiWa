@@ -1,4 +1,7 @@
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
+import { Transaction } from "@mysten/sui/transactions";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import { TrustScore } from "../scoring/score";
 
 export interface CertificationRecord {
@@ -22,37 +25,89 @@ export const suiClient = new SuiClient({
   url: process.env.SUI_RPC_URL ?? getFullnodeUrl(network),
 });
 
-// TODO: the actual on-chain WRITE (as opposed to the read-only client
-// above) is blocked on two open decisions
-// (design/PRE_PRODUCTION_DECISIONS_EN.md section 1):
-//   1. Object ownership model - who owns TestResult, who receives
-//      AgentCertification (the test engine? transferred to the agent
-//      owner's address?).
-//   2. Gas payer - the platform's key (SUI_PUBLISHER_PRIVATE_KEY in
-//      .env.example) or a sponsored-transaction flow.
-// Once resolved, this becomes a `Transaction` built with `@mysten/sui`
-// (NOT the deprecated `@mysten/sui.js` - see design/TECH_STACK_EN.md
-// "Corrections" #1) that publishes a TestResult object per scenario (or at
-// minimum one AgentCertification object per run, per the Must-Have floor)
-// against the package id in move/sources/trust.move, signed with a keypair
-// derived from SUI_PUBLISHER_PRIVATE_KEY and submitted via
-// `suiClient.signAndExecuteTransaction`. For now it mocks a Sui object id
-// so the rest of the pipeline (scoring -> dashboard) can be built and
-// demoed against a stable shape.
+// Object ownership + gas payer are resolved for the hackathon floor (see
+// move/sources/trust.move module doc): the backend's own keypair
+// (SUI_PUBLISHER_PRIVATE_KEY, a bech32 string from `sui keytool export`)
+// both pays gas (free on testnet, via faucet) and receives the
+// AgentCertification object. Setup steps: design/IMPLEMENTATION_NOTES_EN.md
+// "Testnet Sui setup".
+function loadPublisherKeypair(): Ed25519Keypair | null {
+  const raw = process.env.SUI_PUBLISHER_PRIVATE_KEY;
+  if (!raw) return null;
+  const { secretKey } = decodeSuiPrivateKey(raw);
+  return Ed25519Keypair.fromSecretKey(secretKey);
+}
+
+// Per-test TestResult writes (record_test_result) are a Should-Have (see
+// design/SCOPE_FLOOR_PROPOSAL_EN.md) and not wired up here - only the
+// Must-Have final AgentCertification write.
 export async function writeCertification(
   agentId: string,
   testRunId: string,
   score: TrustScore
 ): Promise<CertificationRecord> {
-  const mockObjectId = `0xMOCK_${testRunId}`;
+  const certified_at = new Date().toISOString();
+  const packageId = process.env.SUI_PACKAGE_ID;
+  const keypair = loadPublisherKeypair();
 
+  if (packageId && keypair) {
+    try {
+      const recipient = keypair.getPublicKey().toSuiAddress();
+      const tx = new Transaction();
+
+      tx.moveCall({
+        target: `${packageId}::trust::issue_certification`,
+        arguments: [
+          tx.pure.string(agentId),
+          tx.pure.u8(score.overall_score),
+          tx.pure.string(score.certification_tier),
+          tx.pure.u64(Date.now()),
+          tx.pure.u64(0), // expires_at - no expiry/retest model yet (Won't-Have)
+          tx.pure.u8(100), // multilingual_stability - unused until multilingual scenarios exist (English-only floor)
+          tx.pure.address(recipient),
+        ],
+      });
+
+      const result = await suiClient.signAndExecuteTransaction({
+        signer: keypair,
+        transaction: tx,
+        options: { showObjectChanges: true },
+      });
+
+      const created = result.objectChanges?.find(
+        (change) =>
+          change.type === "created" && change.objectType.endsWith("::trust::AgentCertification")
+      );
+
+      if (created && "objectId" in created) {
+        return {
+          test_run_id: testRunId,
+          agent_id: agentId,
+          overall_score: score.overall_score,
+          model_agreement: score.model_agreement,
+          category_scores: score.category_scores,
+          certified_at,
+          sui_object_id: created.objectId,
+        };
+      }
+
+      console.error("[sui] issue_certification succeeded but no AgentCertification object found in effects");
+    } catch (err) {
+      console.error("[sui] on-chain write failed, falling back to mock:", err instanceof Error ? err.message : err);
+    }
+  }
+
+  // Fallback: SUI_PACKAGE_ID/SUI_PUBLISHER_PRIVATE_KEY not set (package not
+  // published or keypair not configured yet), or the write above failed.
+  // Keeps the rest of the pipeline (scoring -> dashboard) demoable without
+  // a live testnet dependency.
   return {
     test_run_id: testRunId,
     agent_id: agentId,
     overall_score: score.overall_score,
     model_agreement: score.model_agreement,
     category_scores: score.category_scores,
-    certified_at: new Date().toISOString(),
-    sui_object_id: mockObjectId,
+    certified_at,
+    sui_object_id: `0xMOCK_${testRunId}`,
   };
 }

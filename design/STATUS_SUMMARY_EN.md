@@ -43,9 +43,8 @@ on-chain.
 | Two demo agents (SafeAgent/YOLOAgent) | ✅ working, reproduce the intended contrast (100 vs. 58) |
 | Scoring + certification tiers | ✅ implemented (Excellent/Strong/Adequate/Weak/Failing) |
 | Supabase (persistence + live progress) | ✅ framework built (needs the team's own Supabase project) |
-| Sui SDK | 🟡 switched to the correct package (`@mysten/sui`); only the read-only client works so far |
+| Sui SDK + on-chain writes | ✅ real `AgentCertification` write implemented (needs the `sui` CLI run once — see `IMPLEMENTATION_NOTES_EN.md` "Testnet Sui setup" — falls back to a mock id until then) |
 | Real Gonka model calls | 🔴 not started (still a heuristic stub) |
-| Real Sui writes | 🔴 not started (still a mocked object id) |
 
 SafeAgent scores 100 (Excellent), YOLOAgent scores 58 (Weak), failing
 `permission_compliance` and `prompt_injection_resistance` exactly as
@@ -59,27 +58,33 @@ re-verified after every change so far.
 **Team decisions (the actual bottleneck):**
 
 1. **Confirm real Gonka model IDs** — verify Kimi-K2.6/MiniMax/a
-   Chinese-strong model are actually available on Gonka Router. Also worth
-   checking whether a lineage-diverse third judge is available, since all
-   three currently planned models are Chinese-lineage, which weakens the
-   cross-model-agreement signal.
-2. **Sui object ownership model** — who owns `TestResult` /
-   `AgentCertification`.
-3. **Gas payer** — developer-pays vs. sponsored-transaction model.
-4. **Category weighting** — currently equal weights as a placeholder.
-5. **Submission deadline** — needed to plan backward.
+   Chinese-strong model are actually available on Gonka Router (or a
+   generic OpenAI-compatible router as an interim substitute — see below).
+   Also worth checking whether a lineage-diverse third judge is available,
+   since all three currently planned models are Chinese-lineage, which
+   weakens the cross-model-agreement signal.
+2. **Category weighting** — currently equal weights as a placeholder.
+3. **Submission deadline** — needed to plan backward.
 
-**Technical next steps (once decisions land):**
+Resolved since the last update: Sui gas payer and object ownership (both
+defaulted — testnet SUI is free via faucet, backend's own keypair pays and
+owns; see `PRE_PRODUCTION_DECISIONS_EN.md` §1).
+
+**Technical next steps:**
 - Stand up the team's own Supabase project and run
   `backend/supabase/schema.sql` against it (the Supabase project already
   linked in this dev environment belongs to an unrelated app — don't reuse
   it).
+- Run the manual `sui` CLI steps once (install, fund via faucet, publish)
+  to turn on real on-chain writes — see `IMPLEMENTATION_NOTES_EN.md`
+  "Testnet Sui setup." Nothing breaks if this is skipped.
 - Replace the Gonka heuristic stub with real API calls
-  (`backend/src/gonka/router.ts`).
-- Implement the real Sui write path
-  (`backend/src/sui/client.ts`'s `writeCertification`).
-- If time allows: add Chinese-language scenarios, polish the live
-  dashboard.
+  (`backend/src/gonka/router.ts`) — could start with a generic
+  endpoint+API-key router (e.g. OpenRouter) to unblock development before
+  Gonka Router access is confirmed, then swap once it is; the `evaluate()`
+  function is the only integration point, so this is a low-risk swap.
+- If time allows: add Chinese-language scenarios, per-test `TestResult`
+  writes (Should-Have), polish the live dashboard.
 
 ---
 

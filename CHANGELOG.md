@@ -14,6 +14,46 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-27 19:00 — Real Sui testnet writes implemented (konosuke)
+Resolved the two remaining Sui open decisions as hackathon defaults:
+testnet SUI is free via faucet, so "who pays gas" has no real cost either
+way — the backend's own keypair pays. Object ownership defaulted to
+"the test engine's own address" for both `TestResult` and
+`AgentCertification`, since there's no real per-agent wallet (wallet
+integration was cut in an earlier pass). Documented in
+`PRE_PRODUCTION_DECISIONS_EN.md` §1 and `TECH_STACK_EN.md`.
+
+**Bug found and fixed**: `move/sources/trust.move`'s `agent_id` field was
+typed `address` and `test_run_id` was `u64`, but the backend only has
+string identifiers for both (`"safe-agent"`, `"run_<uuid>"`) — no real
+Sui address per agent, no numeric run id. Changed both to `String` in both
+structs and both entry functions before anyone tried to publish/call them
+with the wrong types.
+
+**`backend/src/sui/client.ts`**: `writeCertification()` now builds a
+`Transaction` calling `issue_certification`, signs it with a keypair
+loaded from `SUI_PUBLISHER_PRIVATE_KEY` (via `decodeSuiPrivateKey` +
+`Ed25519Keypair.fromSecretKey`), submits via `signAndExecuteTransaction`,
+and returns the real created object's id. Falls back to the previous
+mocked `0xMOCK_<id>` behavior if `SUI_PACKAGE_ID`/the keypair aren't
+configured, or if the write throws — verified the fallback still returns
+the correct 100/"Excellent" vs. 58/"Weak" split with typecheck clean and a
+live local run. Per-test `TestResult` writes (Should-Have) still not
+wired up, only the Must-Have final `AgentCertification`.
+
+Added a "Testnet Sui setup" section to `design/IMPLEMENTATION_NOTES_EN.md`
+with the exact manual `sui` CLI steps (install, fund via faucet, publish,
+export key) — the `sui` binary isn't available in this dev sandbox, so
+this part has to be run by a teammate, not by the agent. Updated
+`TECH_STACK_EN.md` and `STATUS_SUMMARY_EN.md` to reflect gas payer/
+ownership being resolved and Sui writes being implemented.
+
+Also discussed (not yet implemented, pending teammate confirmation of
+which specific product): using a generic endpoint+API-key router as an
+interim substitute for Gonka while real Gonka Router access is confirmed.
+`backend/src/gonka/router.ts`'s `evaluate()` function is already the only
+integration point, so this would be a low-risk swap when scoped.
+
 ## 2026-08-27 18:00 — Status summary doc added (konosuke)
 Added `design/STATUS_SUMMARY_EN.md` — English translation of a status
 recap given in chat (what we're building / where things stand / what's

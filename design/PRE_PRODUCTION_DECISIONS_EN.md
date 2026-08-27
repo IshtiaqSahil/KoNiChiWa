@@ -12,9 +12,9 @@ Before moving into implementation, these are the open decisions across 10 areas.
 | Network | Testnet (not a production deployment) | Confirm |
 | Language | Move | ✅ Fixed |
 | On-chain vs off-chain | Only scores, hashes, and metadata go on-chain. Detailed reasoning logs stay off-chain (IPFS or DB) with only a hash recorded on-chain | Confirm |
-| Gas cost model | Who pays: the developer registering the agent, or a sponsored-transaction model? | **Decision needed** |
-| Wallet integration | Sui Wallet Standard (`@mysten/dapp-kit`) | Confirm |
-| Object ownership | Is `TestResult` owned by the test engine? Is `AgentCertification` transferred to the agent owner? | **Decision needed (directly affects object design)** |
+| Gas cost model | ~~Who pays~~ → **Resolved**: testnet SUI is free via faucet, so there's no real cost either way. The backend's own keypair pays, funded by `sui client faucet`. See `design/IMPLEMENTATION_NOTES_EN.md` "Testnet Sui setup." | ✅ Resolved |
+| Wallet integration | ~~Sui Wallet Standard (`@mysten/dapp-kit`)~~ → **cut**, not needed (see `TECH_STACK_EN.md` "Corrections" #3) | ✅ Resolved |
+| Object ownership | ~~Is `TestResult` owned by the test engine? Is `AgentCertification` transferred to the agent owner?~~ → **Defaulted**: both are transferred to the test engine's own address for the hackathon floor (no real agent-owner wallet exists, since wallet integration was cut). Revisit if the team wants certifications transferred to agent developers later. | 🟡 Defaulted, not team-confirmed |
 
 ---
 
@@ -118,14 +118,15 @@ Before moving into implementation, these are the open decisions across 10 areas.
 
 These items block downstream design work and should be resolved first:
 
-1. **Agent connection interface** — how the platform communicates with a candidate agent (protocol, auth)
-2. **Sui object ownership model** — who owns `TestResult` and `AgentCertification` objects
-3. **Gas cost model** — who pays for on-chain writes
-4. **Actual Gonka model availability** — confirm real model names/IDs on Gonka Router, especially the Chinese-strong model
-5. **Category weighting formula** — needed before scoring logic can be implemented
-6. **Wallet operations in demo** — real testnet transactions vs mocked
-7. **Scope floor (must-have vs nice-to-have)** — needed to sequence implementation
-8. **Submission deadline** — needed to plan backward
+1. **Actual Gonka model availability** — confirm real model names/IDs on Gonka Router, especially the Chinese-strong model
+2. **Category weighting formula** — needed before scoring logic can be implemented
+3. **Scope floor (must-have vs nice-to-have)** — needed to sequence implementation
+4. **Submission deadline** — needed to plan backward
+
+Resolved since this list was first written: agent connection interface
+(REST/JSON, see `AGENT_CONNECTION_INTERFACE_PROPOSAL_EN.md`), Sui gas cost
+model and object ownership (see above — testnet faucet + test-engine-owns
+default), wallet operations in demo (cut entirely, mocked by design).
 
 ---
 

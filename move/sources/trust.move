@@ -1,17 +1,27 @@
-// Skeleton only - not built or tested (no Sui CLI in this environment).
+// Skeleton - not yet published (needs the Sui CLI to run `sui client
+// publish`; see design/IMPLEMENTATION_NOTES_EN.md "Testnet Sui setup").
 // Struct fields mirror design/prithvi_idea.txt and
 // design/ULTIMATE_AI_AGENT_TRUST_PLATFORM_EN.md's schema sketch.
 //
-// TODO (design/PRE_PRODUCTION_DECISIONS_EN.md section 1, both
-// "Decision needed"):
-//   1. Object ownership - who owns TestResult (kept with the test engine
-//      as a shared/owned object?) and who receives AgentCertification
-//      (transferred to the agent developer's address?). This module
-//      currently just transfers both to whatever address calls the entry
-//      function - placeholder, not a real ownership model.
-//   2. Gas payer - whichever address calls these functions pays gas.
-//      Sponsored-transaction flow, if chosen, changes the entry function
-//      signatures (needs a sponsor witness/capability).
+// Resolved (design/PRE_PRODUCTION_DECISIONS_EN.md section 1):
+//   - Gas payer: testnet SUI is free via faucet, so "who pays" has no real
+//     cost either way. The backend's own keypair (SUI_PUBLISHER_PRIVATE_KEY)
+//     pays, funded by `sui client faucet`.
+//   - Object ownership: defaulted to "the test engine's own address" (both
+//     structs transfer to whatever `recipient` the caller passes, and the
+//     backend passes its own address) so the hackathon floor doesn't block
+//     on a real agent-owner-wallet flow, which is out of scope anyway
+//     (wallet integration was cut - see design/TECH_STACK_EN.md
+//     "Corrections" #3). Revisit if the team decides certifications should
+//     transfer to the agent developer's own address instead.
+//
+// Correction: `agent_id` was originally typed `address` and `test_run_id`
+// was `u64`, but neither the backend nor the demo agents have a real Sui
+// address per agent (no wallet integration - see above) or a numeric run
+// id (`backend/src/testRun/orchestrator.ts` generates ids like
+// "run_<uuid>"). Both are just opaque identifier strings in this scope, so
+// both fields are `String` here instead - the original types would have
+// been unusable from the backend's actual data.
 module konichiwa::trust {
     use std::string::String;
     use std::vector;
@@ -22,8 +32,8 @@ module konichiwa::trust {
     /// One scored scenario run against a candidate agent.
     public struct TestResult has key, store {
         id: UID,
-        agent_id: address,
-        test_run_id: u64,
+        agent_id: String,
+        test_run_id: String,
         test_type: String,
         score: u8,
         timestamp: u64,
@@ -35,7 +45,7 @@ module konichiwa::trust {
     /// Aggregate certification for one agent's test run.
     public struct AgentCertification has key, store {
         id: UID,
-        agent_id: address,
+        agent_id: String,
         overall_score: u8,
         final_status: String,
         certified_at: u64,
@@ -43,12 +53,11 @@ module konichiwa::trust {
         multilingual_stability: u8,
     }
 
-    /// Placeholder entry point - TODO replace `recipient` with whatever
-    /// the resolved ownership model dictates instead of taking it as a
-    /// raw argument.
+    /// `recipient` is the test engine's own address for now (see module
+    /// doc above) - not a real per-agent-owner wallet.
     public entry fun record_test_result(
-        agent_id: address,
-        test_run_id: u64,
+        agent_id: String,
+        test_run_id: String,
         test_type: String,
         score: u8,
         gonka_request_id: String,
@@ -73,7 +82,7 @@ module konichiwa::trust {
     }
 
     public entry fun issue_certification(
-        agent_id: address,
+        agent_id: String,
         overall_score: u8,
         final_status: String,
         certified_at: u64,

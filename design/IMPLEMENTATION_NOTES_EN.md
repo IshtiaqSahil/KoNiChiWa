@@ -1,7 +1,7 @@
-# Implementation Notes — Supabase, Sui SDK, Certification Tiers
+# Implementation Notes — Supabase, Sui, Certification Tiers
 
-For whoever picks this up next. Covers everything built in the
-2026-08-27 16:00-17:30 session (see `CHANGELOG.md` for the raw log) —
+For whoever picks this up next. Covers everything built across the
+2026-08-27 16:00-19:00 sessions (see `CHANGELOG.md` for the raw log) —
 what changed, why, how to get it running on your machine, and exactly
 where the line is between "built" and "still blocked." Pairs with
 `design/TECH_STACK_EN.md` (status of every stack choice) and
@@ -15,17 +15,21 @@ where the line is between "built" and "still blocked." Pairs with
    (Postgres + Realtime) instead of the previously-undecided Postgres/Mongo
    + not-yet-built Socket.io.
 2. The Sui client now uses the **current** SDK package (`@mysten/sui`, not
-   the deprecated `@mysten/sui.js`) — read-only for now, since writing is
-   still blocked on two open decisions.
+   the deprecated `@mysten/sui.js`) and **writes a real on-chain
+   `AgentCertification` object** when configured — gas payer and object
+   ownership, previously open decisions, are resolved as hackathon
+   defaults (testnet SUI is free via faucet either way; the backend's own
+   keypair pays and owns). See "Testnet Sui setup" below.
 3. Scores now come with a **certification tier** label
    ("Excellent"/"Strong"/"Adequate"/"Weak"/"Failing").
 4. Nothing about the demo narrative changed: SafeAgent still scores
    100 ("Excellent"), YOLOAgent still scores 58 ("Weak"), verified locally
-   after every change in this session.
-5. **You need to set up your own Supabase project** before any of the new
-   persistence/realtime code does anything — see below. Nothing breaks if
-   you skip it; it just silently no-ops (dashboard still shows the final
-   result, just not live per-scenario progress).
+   after every change.
+5. **You need to set up your own Supabase project and (optionally) publish
+   the Move package to Sui testnet** before the new code does anything
+   live — see below. Nothing breaks if you skip either: Supabase
+   persistence/realtime silently no-ops, and Sui writes fall back to a
+   mocked object id.
 
 ---
 
@@ -50,6 +54,77 @@ Create your own free Supabase project:
 If you skip all of this, the app still runs — persistence calls become
 silent no-ops (backend) and the dashboard shows a small orange notice and
 falls back to displaying only the final result (frontend).
+
+---
+
+## Testnet Sui setup
+
+`backend/src/sui/client.ts` now does a real on-chain write
+(`issue_certification`) when `SUI_PACKAGE_ID` and
+`SUI_PUBLISHER_PRIVATE_KEY` are both set and the address they resolve to
+has testnet SUI. Everything up through "sign and submit the transaction"
+is already coded — what's left is CLI-only setup that needs the `sui`
+binary, which isn't available in this dev sandbox, so run these steps
+yourself:
+
+1. **Install the Sui CLI.** Easiest on any platform: download a prebuilt
+   binary from the Releases page of
+   `https://github.com/MystenLabs/sui` (the same repo already referenced
+   in `move/Move.toml`) and put it on your `PATH`. Building from source via
+   `cargo install` also works but is a long compile — skip it unless the
+   binary release doesn't cover your platform.
+2. **Point the CLI at testnet and create an address:**
+   ```
+   sui client new-env --alias testnet --rpc https://fullnode.testnet.sui.io:443
+   sui client switch --env testnet
+   sui client new-address ed25519
+   ```
+   (If this is your very first time running `sui client`, it'll prompt you
+   to set up a config and an address interactively — follow the prompts,
+   they land in the same place.)
+3. **Fund it — free, no real money:**
+   ```
+   sui client faucet
+   ```
+   Testnet SUI has no monetary value; this is exactly what resolves the
+   "who pays gas" decision that used to be open (see
+   `PRE_PRODUCTION_DECISIONS_EN.md` §1) — it doesn't matter who "pays"
+   because it's free either way.
+4. **Publish the Move package:**
+   ```
+   cd move
+   sui client publish --gas-budget 100000000
+   ```
+   Find the `packageId` in the output (or in the `objectChanges` of type
+   `"published"`) → that's `SUI_PACKAGE_ID`.
+5. **Export the private key in the format the backend expects** (a bech32
+   string starting `suiprivkey1...`, which `decodeSuiPrivateKey` in
+   `backend/src/sui/client.ts` parses directly):
+   ```
+   sui keytool export --key-identity <your address from step 2>
+   ```
+   → that's `SUI_PUBLISHER_PRIVATE_KEY`.
+6. Fill both into `.env` alongside the already-present `SUI_NETWORK=testnet`
+   and `SUI_RPC_URL=https://fullnode.testnet.sui.io:443`.
+7. Run a test suite (`curl -X POST http://localhost:4000/test-runs/safe-agent ...`
+   or the dashboard) and check the returned `certification.sui_object_id` —
+   it should now be a real `0x...` object id instead of `0xMOCK_...`.
+   Paste it into the Sui testnet explorer to see the object.
+
+If you skip this, `writeCertification()` falls back to the same mocked
+`0xMOCK_<test_run_id>` behavior as before — nothing else in the pipeline
+depends on this being real.
+
+**Object ownership note:** the Move contract's `agent_id` field was
+originally typed `address` and `test_run_id` was `u64` — both were
+type-mismatched against what the backend actually has (agent ids are
+strings like `"safe-agent"`, run ids are strings like `"run_<uuid>"`, and
+there's no real per-agent Sui wallet since wallet integration was cut).
+Fixed to `String` in `move/sources/trust.move` — re-publish if you had an
+older build. `AgentCertification` is transferred to the backend's own
+address (not the agent developer's), a pragmatic default for the
+hackathon floor — see the module doc comment in `trust.move` for the full
+reasoning and how to change it later.
 
 ---
 
@@ -128,7 +203,8 @@ Two things worth calling out:
 | `backend/src/testRun/orchestrator.ts` | Calls the four persistence functions at the right points in the existing scenario loop; wrapped the loop in try/catch so a mid-run failure calls `failTestRun` before rethrowing. |
 | `backend/src/scoring/weights.ts` | Added `CERTIFICATION_TIERS` (the proposed 90/75/60/40/0 bands with placeholder labels). |
 | `backend/src/scoring/score.ts` | Added `getCertificationTier()`; `TrustScore` now has a `certification_tier` field. |
-| `backend/src/sui/client.ts` | Now imports `@mysten/sui/client` and constructs a real read-only `SuiClient`. `writeCertification()` itself is unchanged — still mocked, still blocked on the two Sui decisions. |
+| `backend/src/sui/client.ts` | Real read-only `SuiClient` (`@mysten/sui/client`), plus `writeCertification()` now builds/signs/submits a real `issue_certification` transaction when `SUI_PACKAGE_ID`+`SUI_PUBLISHER_PRIVATE_KEY` are set and funded, falling back to the mocked object id otherwise or on any failure. |
+| `move/sources/trust.move` | `agent_id` (`address` → `String`) and `test_run_id` (`u64` → `String`) corrected to match what the backend actually has; both structs now transfer to the caller's own address (test-engine-owns default). |
 | `backend/src/routes/testRuns.ts` | Reads an optional `test_run_id` from the POST body and passes it through. |
 | `frontend/src/supabaseClient.ts` | Anon-key client for the browser; exports `null` if unset. |
 | `frontend/src/vite-env.d.ts` | New file — needed for `import.meta.env` typing (didn't exist before). |
@@ -147,8 +223,11 @@ items" list in `TECH_STACK_EN.md`.
 - **Gonka**: `backend/src/gonka/router.ts` still returns heuristic scores.
   Real model IDs (and the lineage-diversity flag from `TECH_STACK_EN.md`
   "Corrections" #5) are still unresolved.
-- **Sui writes**: `writeCertification()` still returns a mocked object id.
-  Blocked on object-ownership model + gas-payer decision.
+- **Per-test `TestResult` writes**: the Move entry function
+  `record_test_result` exists and is correctly typed, but nothing calls it
+  yet — only the final `issue_certification` (Must-Have) is wired up. This
+  is the Should-Have "per-test write" upgrade from
+  `SCOPE_FLOOR_PROPOSAL_EN.md`.
 - **Category weights / agreement formula**: `CATEGORY_WEIGHTS` still equal
   weights; agreement formula still the original stddev-based stub.
 - **Wallet operations**: demo agents still don't touch a real wallet

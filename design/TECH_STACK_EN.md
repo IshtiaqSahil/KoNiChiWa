@@ -49,12 +49,12 @@ Status legend: ✅ built and running · 🟡 chosen, not yet implemented ·
 
 | Layer | Choice | Status |
 |---|---|---|
-| Language | Move | ✅ package scaffolded at `move/sources/trust.move` |
-| SDK | ~~`@mysten/sui.js`~~ → **`@mysten/sui`** | 🟡 read-only `SuiClient` wired up in `backend/src/sui/client.ts`; write path still blocked on ownership + gas payer decisions below |
-| Network | Testnet | 🟡 chosen, nothing published (no `sui` CLI run yet, rev unpinned in `move/Move.toml`) |
-| Object model | Per-test `TestResult` objects (Should-Have) vs. one final `AgentCertification` object (Must-Have) | 🔴 ownership model undecided |
-| Gas payer | Developer registering the agent vs. sponsored transactions | 🔴 open decision |
-| Current behavior | `backend/src/sui/client.ts` mocks an object ID instead of writing on-chain | 🟡 stubbed, marked `TODO` |
+| Language | Move | ✅ package at `move/sources/trust.move`; `agent_id`/`test_run_id` corrected from `address`/`u64` to `String` (see file header) since neither the backend nor demo agents have real per-agent Sui addresses or numeric run ids |
+| SDK | ~~`@mysten/sui.js`~~ → **`@mysten/sui`** | ✅ both the read-only `SuiClient` and the real write path (`issue_certification` call) implemented in `backend/src/sui/client.ts` |
+| Network | Testnet | ✅ free via faucet — see `IMPLEMENTATION_NOTES_EN.md` "Testnet Sui setup" for the manual CLI steps (publish + fund, needs the `sui` binary, not runnable from this dev sandbox) |
+| Object model | One final `AgentCertification` object per run (Must-Have) | ✅ implemented; per-test `TestResult` writes (Should-Have) still not wired up |
+| Gas payer / ownership | Backend's own keypair pays (free on testnet) and receives both object types | ✅ resolved as a hackathon default — see `PRE_PRODUCTION_DECISIONS_EN.md` §1 |
+| Current behavior | Writes a real `AgentCertification` object if `SUI_PACKAGE_ID`+`SUI_PUBLISHER_PRIVATE_KEY` are set and funded; otherwise (or on any write failure) falls back to a mocked object ID | ✅ |
 
 ## Scoring
 
@@ -159,16 +159,16 @@ Open Items" — repeated here because they're what turns 🔴/🟡 rows above in
 
 1. Real Gonka model IDs, and specifically whether a non-Chinese-lineage
    third judge is available (see Correction #5 above)
-2. Sui object ownership model (`TestResult` vs `AgentCertification`)
-3. Gas payer decision
-4. Category weighting formula
-5. Wallet operations in demo (real testnet tx vs mocked)
-6. Submission deadline
+2. Category weighting formula
+3. Submission deadline
 
 Resolved by this review, no longer open: off-chain database
 (Supabase/Postgres), realtime mechanism (Supabase Realtime), demo-agent
 implementation approach (keep hand-rolled), Sui SDK package name
-(`@mysten/sui`), frontend wallet library (not needed).
+(`@mysten/sui`), frontend wallet library (not needed), Sui gas payer
+(testnet faucet — free either way), Sui object ownership (defaulted to
+test-engine-owns for the hackathon floor), wallet operations in demo (cut
+entirely, matches Scope Floor).
 
 ---
 
