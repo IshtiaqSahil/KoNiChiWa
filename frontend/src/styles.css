@@ -95,6 +95,11 @@ body {
   border-radius: 999px; padding: 0.3rem 0.75rem;
   font-size: 0.78rem; color: var(--text-dim);
 }
+/* Chips are mostly static status readouts, but the certifications link is
+   a real <a> among them - match the rest rather than showing default link
+   styling for just that one. */
+a.chip { text-decoration: none; }
+a.chip:hover { border-color: var(--border-strong); color: var(--text); }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
 .dot.on { background: var(--pass); box-shadow: 0 0 0 3px rgba(76, 141, 255, 0.18); }
 .dot.off { background: var(--warn); }
@@ -178,6 +183,11 @@ body {
 }
 .scenario:last-child { border-bottom: 0; }
 .scenario.pending { opacity: 0.5; }
+/* CertificationsPage rows are <a> tags (whole row is clickable, links to
+   /verify/:id) rather than plain divs like the live scenario list - strip
+   the default link styling so they read as list rows, not blue text. */
+a.cert-row { text-decoration: none; color: inherit; }
+a.cert-row:hover { background: var(--bg-inset); }
 .scenario-id { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-faint); }
 .scenario-msg { color: var(--text); margin: 0.15rem 0 0; word-break: break-word; }
 .scenario-reply { color: var(--text-dim); margin: 0.2rem 0 0; font-size: 0.8rem; word-break: break-word; }

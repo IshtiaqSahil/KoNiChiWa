@@ -14,6 +14,33 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-29 01:40 — Certifications history page (Sahil)
+`frontend/src/CertificationsPage.tsx` (new, `/certifications`) - a
+browsable list of every completed certification, most recent first, each
+row linking to its `/verify/:id` page. Fills the gap between VerifyPage
+(one result, only reachable if you already have its link) and the live
+dashboard (only ever shows the two demo agents' latest run) - there was no
+way to see certification history at all before this. Reads straight from
+Supabase (`test_runs`, same public-read RLS as VerifyPage), capped at the
+100 most recent. Linked from the main dashboard's status strip so it's
+discoverable, not just reachable by typing the URL.
+
+Extracted `loadUiLanguage`/`LOCALE_KEY` (was duplicated verbatim between
+`App.tsx` and `VerifyPage.tsx`) into `frontend/src/uiLanguage.ts` rather
+than copy-pasting it a third time for this page.
+
+**Bug found and fixed while testing against real historical data**: rows
+written before `model_agreement_factor`/`language_stability_factor`
+existed in the schema (i.e. every certification from before today's
+verification-page work) render those as `null` - VerifyPage's formula line
+showed `11 ×  × = 13` with blank gaps instead of numbers. Fixed to show
+`—` for missing factors instead of nothing.
+
+Verified live: history list shows real runs from throughout this session
+(both agents, full score range), clicking a row navigates to the correct
+verification page, and the null-factor fix confirmed against an actual
+pre-existing row. Full frontend build clean.
+
 ## 2026-08-29 01:20 — Public verification page (Sahil)
 The public verification page from the original pitch doc
 (`ULTIMATE_AI_AGENT_TRUST_PLATFORM_EN.md`'s "Public Verification Page"

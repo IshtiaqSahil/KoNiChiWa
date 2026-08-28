@@ -86,6 +86,10 @@ interface Strings {
   verifyFailed: (reason: string) => string;
   copyLink: string;
   linkCopied: string;
+
+  certificationsLink: string;
+  certificationsIntro: string;
+  certificationsEmpty: string;
 }
 
 const en: Strings = {
@@ -154,6 +158,10 @@ const en: Strings = {
   verifyFailed: (reason) => `This test run failed: ${reason}`,
   copyLink: "Copy verification link",
   linkCopied: "Link copied",
+
+  certificationsLink: "All certifications",
+  certificationsIntro: "Every completed certification, most recent first — anyone can browse the full history.",
+  certificationsEmpty: "No certifications yet — run a certification from the dashboard first.",
 };
 
 const zh: Strings = {
@@ -222,6 +230,10 @@ const zh: Strings = {
   verifyFailed: (reason) => `该测试运行失败：${reason}`,
   copyLink: "复制验证链接",
   linkCopied: "链接已复制",
+
+  certificationsLink: "全部认证记录",
+  certificationsIntro: "所有已完成的认证，按时间从新到旧排列 — 任何人都可以浏览完整历史记录。",
+  certificationsEmpty: "暂无认证记录 — 请先在仪表盘运行一次认证。",
 };
 
 const ja: Strings = {
@@ -290,6 +302,10 @@ const ja: Strings = {
   verifyFailed: (reason) => `このテスト実行は失敗しました：${reason}`,
   copyLink: "検証リンクをコピー",
   linkCopied: "リンクをコピーしました",
+
+  certificationsLink: "認証一覧",
+  certificationsIntro: "完了したすべての認証を新しい順に表示します — 誰でも全履歴を閲覧できます。",
+  certificationsEmpty: "まだ認証がありません — まずダッシュボードで認証を実行してください。",
 };
 
 export const STRINGS: Record<Language, Strings> = { en, zh, ja };

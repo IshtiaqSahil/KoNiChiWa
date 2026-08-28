@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Language, ModelJudgment } from "./api";
-import { LANGUAGE_NAMES, STRINGS, UI_LANGUAGES, categoryLabel, tierLabel } from "./i18n";
+import { LANGUAGE_NAMES, STRINGS, categoryLabel, tierLabel } from "./i18n";
 import { scoreColor, tierClass } from "./scoreColor";
 import { supabase } from "./supabaseClient";
+import { loadUiLanguage } from "./uiLanguage";
 import { ScoreDial } from "./components/ScoreDial";
 import { ScoreBars, BarItem } from "./components/ScoreBars";
 import { ScenarioList, ScenarioRow } from "./components/ScenarioList";
@@ -58,16 +59,6 @@ type LoadState =
   | { kind: "running" }
   | { kind: "failed"; reason: string }
   | { kind: "ready"; run: TestRunRow; scenarios: ScenarioResultRow[] };
-
-function loadUiLanguage(): Language {
-  try {
-    const stored = localStorage.getItem("konichiwa.ui-language");
-    if (stored && (UI_LANGUAGES as string[]).includes(stored)) return stored as Language;
-  } catch {
-    // Private-mode / blocked storage: fall through to the default.
-  }
-  return "en";
-}
 
 export function VerifyPage({ testRunId }: { testRunId: string }) {
   const [uiLanguage] = useState<Language>(loadUiLanguage);
@@ -229,8 +220,12 @@ function VerifiedResult({
           <p className={`tier ${tierClass(overallScore)}`}>{tierLabel(t, run.certification_tier ?? "")}</p>
           <p className="formula">{t.formula}</p>
           <p className="formula">
-            <b>{run.base_score}</b> × <b>{run.model_agreement_factor}</b> × <b>{run.language_stability_factor}</b> ={" "}
-            <b>{overallScore}</b>
+            {/* model_agreement_factor/language_stability_factor were added
+                to the schema after some certifications were already
+                written - older rows have them as null. Show "—" instead of
+                a blank gap ("11 ×  × = 13") for those. */}
+            <b>{run.base_score ?? "—"}</b> × <b>{run.model_agreement_factor ?? "—"}</b> ×{" "}
+            <b>{run.language_stability_factor ?? "—"}</b> = <b>{overallScore}</b>
           </p>
         </div>
       </div>

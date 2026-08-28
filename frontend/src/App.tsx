@@ -10,6 +10,7 @@ import { AgentCard } from "./components/AgentCard";
 import { ScenarioRow } from "./components/ScenarioList";
 import { LANGUAGE_NAMES, STRINGS, UI_LANGUAGES } from "./i18n";
 import { supabase } from "./supabaseClient";
+import { LOCALE_KEY, loadUiLanguage } from "./uiLanguage";
 import "./styles.css";
 
 const AGENTS = [
@@ -38,18 +39,6 @@ interface LiveScenarioRow {
   replied_in_language?: boolean;
   base_score: number;
   judgments?: ModelJudgment[];
-}
-
-const LOCALE_KEY = "konichiwa.ui-language";
-
-function loadUiLanguage(): Language {
-  try {
-    const stored = localStorage.getItem(LOCALE_KEY);
-    if (stored && (UI_LANGUAGES as string[]).includes(stored)) return stored as Language;
-  } catch {
-    // Private-mode / blocked storage: fall through to the default.
-  }
-  return "en";
 }
 
 export default function App() {
@@ -220,6 +209,9 @@ export default function App() {
           <span className="dot on" />
           {t.statusSui}
         </span>
+        <a className="chip" href="/certifications">
+          {t.certificationsLink}
+        </a>
       </div>
 
       <div className="agent-grid">
