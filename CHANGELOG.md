@@ -14,6 +14,60 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-28 22:53 — Per-scenario TestResult on-chain writes, MiniMax JSON parser fix (Sahil)
+Two fixes, both found from real runs, not speculative.
+
+**Per-scenario Sui writes** - the last Should-Have from the original pitch
+("watch each test land on-chain live"), previously only the final
+`AgentCertification` was written. `move/sources/trust.move`'s
+`record_test_result` already existed and was correctly typed; nothing
+called it. `backend/src/sui/client.ts` refactored: extracted a shared
+`signAndExecuteMoveCall` helper (gas resolution, sign, submit, extract
+created object id) used by both `writeCertification` and the new
+`writeTestResult`. `backend/src/testRun/orchestrator.ts` now awaits
+`writeTestResult` per scenario and includes `sui_object_id` in each
+`ScenarioRunResult`; `backend/src/db/persistence.ts` +
+`backend/supabase/schema.sql` (additive `sui_object_id` column, applied)
+carry it into Supabase too.
+
+**Found and fixed while wiring this up**: per-scenario writes run
+concurrently with each other (`orchestrator.ts`'s bounded concurrency), but
+Sui gas coins are versioned objects - concurrent transactions spending the
+same coin would race and only one could land. Added a module-level queue
+(`enqueueSuiWrite`) serializing every Sui write against every other one.
+That alone wasn't quite sufficient: live testing still hit "object version
+unavailable for consumption, current version: X+1" even fully sequential -
+read-after-write lag on the read side (`getCoins` hitting a node whose view
+hadn't caught up yet), not a sequencing bug. Added one retry with a fresh
+coin fetch (`withRetry`), the standard fix for this class of Sui error.
+
+**Verified live**: 10/10 writes landed real object ids in one full
+YOLOAgent run (9 scenarios + 1 certification) - 3 hit the version race on
+the first attempt, all recovered on retry, zero fell through to the mock
+fallback. A separate SafeAgent run landed 7/9 scenario writes for real with
+2 correctly falling back to mock (transient failures - the fallback is
+supposed to catch exactly this).
+
+**Real cost, worth knowing**: run time went from ~45s to ~1m40-46s per
+agent, since every scenario now adds a real sequential Sui round-trip on
+top of the existing Gonka judging. This is the actual price of the "live
+on-chain" feature working for real, not a regression - flagging for demo
+planning, since two agents back-to-back is now ~3.5 minutes.
+
+**Also fixed**: `backend/src/gonka/router.ts` - MiniMax-M2.7 sometimes
+prefixes its output with a `<think>...</think>` block before the answer,
+causing "No JSON found" (thinking exhausted the token budget) and "Invalid
+score: undefined" (JSON truncated mid-object). Added `stripThinkingBlock()`
+before JSON extraction and bumped `max_tokens` 300 -> 1000. Confirmed via
+GonkaRouter's own docs and MiniMax-AI's GitHub issues that M2.x's reasoning
+is mandatory and can't be disabled via API (`thinking: {"type":
+"disabled"}` is accepted but silently ignored) - so this reduces MiniMax's
+failure rate (the "Invalid score" class is gone entirely) but doesn't
+eliminate it; MiniMax will likely keep falling back to the stub more often
+than Kimi/DeepSeek regardless. Swapping `GONKA_MODEL_B` for GLM-5.2-FP8
+(GonkaRouter's fourth available model, untested so far) would be the more
+effective fix if this keeps mattering - not done here, pending team call.
+
 ## 2026-08-28 06:15 — Dashboard visual pass: fixed invisible score bars, cold flat theme, centered masthead (Junmeng)
 Follow-up polish on the dashboard rebuild, from live UI testing rather than
 reading code.

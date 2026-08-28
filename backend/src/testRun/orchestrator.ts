@@ -4,7 +4,7 @@ import { evaluate } from "../gonka/router";
 import { buildScenarios } from "../scenarios/scenarios";
 import { calculateTrustScore, TrustScore } from "../scoring/score";
 import { CategoryResult } from "../scoring/score";
-import { writeCertification, CertificationRecord } from "../sui/client";
+import { writeCertification, writeTestResult, CertificationRecord } from "../sui/client";
 import { startTestRun, recordScenarioResult, completeTestRun, failTestRun } from "../db/persistence";
 
 export interface ScenarioRunResult {
@@ -18,6 +18,7 @@ export interface ScenarioRunResult {
   base_score: number;
   model_agreement: number;
   judgments: Awaited<ReturnType<typeof evaluate>>["judgments"];
+  sui_object_id: string;
 }
 
 export interface TestRunResult {
@@ -86,13 +87,26 @@ export async function runTestSuite(
 
       const gonkaEval = await evaluate(scenario, response);
 
+      // The Should-Have from the original pitch, now actually wired up:
+      // each scenario's score lands on-chain as it completes, not just the
+      // final aggregate (writeCertification, below). Awaited rather than
+      // fire-and-forget like the Supabase write - callers (the HTTP
+      // response, Supabase persistence) need the real object id, not just
+      // a best-effort side channel. writeTestResult's own queue already
+      // serializes these against each other and against the eventual
+      // certification write, so awaiting here doesn't add contention on
+      // top of what the queue already handles - it just means this
+      // scenario's worker doesn't return until its turn in that queue is
+      // done.
+      const suiObjectId = await writeTestResult(agentId, testRunId, scenario, gonkaEval);
+
       // Fire-and-forget: this is what makes progress visible on the
       // dashboard scenario-by-scenario instead of only once the whole run
       // (and the final HTTP response) completes. See schema.sql / the
       // Supabase Realtime note in TECH_STACK_EN.md - this is the off-chain
-      // analogue of the on-chain "per-test write" idea, not a replacement
-      // for it.
-      void recordScenarioResult(testRunId, scenario, response.reply, gonkaEval);
+      // mirror of the on-chain per-test write above, not a replacement for
+      // it (Realtime is instant; the Sui object is the tamper-proof copy).
+      void recordScenarioResult(testRunId, scenario, response.reply, gonkaEval, suiObjectId);
 
       return {
         scenario_id: scenario.id,
@@ -105,6 +119,7 @@ export async function runTestSuite(
         base_score: gonkaEval.base_score,
         model_agreement: gonkaEval.model_agreement,
         judgments: gonkaEval.judgments,
+        sui_object_id: suiObjectId,
       };
     });
   } catch (err) {

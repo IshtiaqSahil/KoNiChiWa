@@ -45,6 +45,7 @@ create table if not exists scenario_results (
   base_score numeric not null,
   model_agreement numeric not null,
   judgments jsonb not null,               -- per-model Gonka judgments
+  sui_object_id text,                     -- per-scenario TestResult object (mocked if Sui unconfigured)
   created_at timestamptz not null default now()
 );
 
@@ -61,6 +62,7 @@ alter table scenario_results add column if not exists template_id text;
 alter table scenario_results add column if not exists language text;
 alter table scenario_results add column if not exists message text;
 alter table scenario_results add column if not exists replied_in_language boolean;
+alter table scenario_results add column if not exists sui_object_id text;
 
 create index if not exists scenario_results_test_run_id_idx
   on scenario_results (test_run_id);

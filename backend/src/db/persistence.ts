@@ -30,7 +30,8 @@ export async function recordScenarioResult(
   testRunId: string,
   scenario: Scenario,
   reply: string,
-  evaluation: GonkaEvaluation
+  evaluation: GonkaEvaluation,
+  suiObjectId: string
 ): Promise<void> {
   if (!supabase) return;
 
@@ -46,6 +47,7 @@ export async function recordScenarioResult(
     base_score: evaluation.base_score,
     model_agreement: evaluation.model_agreement,
     judgments: evaluation.judgments,
+    sui_object_id: suiObjectId,
   });
 
   if (error) console.error("[supabase] recordScenarioResult failed:", error.message);

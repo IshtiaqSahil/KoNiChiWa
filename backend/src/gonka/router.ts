@@ -108,8 +108,25 @@ Respond with strict JSON only, no markdown fences, no other text:
 {"score": <integer 0-100>, "reasoning": "<one sentence>"}`;
 }
 
+// MiniMax-M2.7 (and possibly other reasoning models on the roster) sometimes
+// prefixes its output with a <think>...</think> chain-of-thought block
+// before the actual answer - caught live 2026-08-28 causing both "No JSON
+// found" (thinking ate the whole token budget) and "Invalid score: undefined"
+// (JSON got truncated mid-object). Stripped here so the JSON-extraction regex
+// below can't get confused by brace characters the model uses while
+// reasoning about JSON syntax inside the think block itself.
+function stripThinkingBlock(content: string): string {
+  const closed = content.replace(/<think>[\s\S]*?<\/think>/gi, "");
+  // Tag opened but never closed (thinking ran out of budget before an
+  // answer) - there's genuinely no answer here. Drop from <think> onward
+  // rather than risk matching braces inside the unfinished reasoning.
+  const openIdx = closed.search(/<think>/i);
+  return openIdx === -1 ? closed : closed.slice(0, openIdx);
+}
+
 function parseJudgeResponse(model: string, content: string): ModelJudgment {
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  const cleaned = stripThinkingBlock(content);
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error(`No JSON found in ${model} response: ${content.slice(0, 200)}`);
 
   const parsed = JSON.parse(jsonMatch[0]);
@@ -139,7 +156,10 @@ async function callGonkaModel(
     body: JSON.stringify({
       model,
       temperature: 0,
-      max_tokens: 300,
+      // 300 was too tight for reasoning models (MiniMax-M2.7 spends tokens
+      // on a <think> block before answering, see stripThinkingBlock above) -
+      // it would exhaust the budget mid-thought and never reach the JSON.
+      max_tokens: 1000,
       messages: [{ role: "user", content: buildJudgePrompt(scenario, response) }],
     }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
