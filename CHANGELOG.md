@@ -14,6 +14,23 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-29 00:55 — SUI_PER_SCENARIO_WRITES demo-mode toggle (Sahil)
+`SUI_PER_SCENARIO_WRITES=false` skips the per-scenario `TestResult` writes
+added in the entry below (each is a real sequential Sui round-trip) for a
+faster demo run - the final `AgentCertification` write always still
+happens regardless of this flag, since that one's the Must-Have. Verified:
+with it off, all 9 scenario results correctly show `0xMOCK_<scenario_id>`
+while the certification still lands a real object id.
+
+**Caveat found while verifying, worth knowing for demo planning**: turning
+this off did *not* reliably return the run to the earlier ~45s baseline -
+this test run still took ~1m27s, because GonkaRouter itself was under
+heavy load (10 fallbacks, 7 full 28s timeouts, out of 27 possible judge
+calls) independent of anything Sui-related. The toggle removes the Sui
+overhead correctly, but Gonka's own timeout behavior can dominate
+regardless of it when GonkaRouter is busy - not something either flag
+controls.
+
 ## 2026-08-28 22:53 — Per-scenario TestResult on-chain writes, MiniMax JSON parser fix (Sahil)
 Two fixes, both found from real runs, not speculative.
 

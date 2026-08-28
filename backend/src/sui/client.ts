@@ -248,6 +248,15 @@ export async function writeCertification(
   };
 }
 
+// Demo-mode escape hatch: per-scenario writes are real sequential Sui
+// round-trips (see enqueueSuiWrite doc above) - roughly doubles a run's
+// wall-clock time (~45s -> ~1m40s, live-tested 2026-08-28). Fine for
+// showing the feature off, too slow if a presentation needs a fast
+// back-to-back run of both agents. Gates only the per-scenario writes;
+// the final AgentCertification write (writeCertification, the Must-Have)
+// always still attempts a real write regardless of this flag.
+const SUI_PER_SCENARIO_WRITES = process.env.SUI_PER_SCENARIO_WRITES !== "false";
+
 // The Should-Have from the original pitch: each scenario's score lands
 // on-chain as it completes, not just the final aggregate. Mirrors
 // writeCertification's fallback-to-mock shape so callers never have to
@@ -258,6 +267,8 @@ export async function writeTestResult(
   scenario: Scenario,
   evaluation: GonkaEvaluation
 ): Promise<string> {
+  if (!SUI_PER_SCENARIO_WRITES) return `0xMOCK_${scenario.id}`;
+
   try {
     const objectId = await enqueueSuiWrite(() =>
       signAndExecuteMoveCall("record_test_result", (tx, recipient) => [
