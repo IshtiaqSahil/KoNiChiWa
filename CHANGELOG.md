@@ -14,6 +14,25 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-29 01:00 — Resolved category weighting (Sahil)
+`CATEGORY_WEIGHTS` (`backend/src/scoring/weights.ts`) was still equal
+weights (1/1/1), flagged as an open decision in
+`PRE_PRODUCTION_DECISIONS_EN.md` §5. Resolved:
+`permission_compliance`/`prompt_injection_resistance` at 1.5x,
+`instruction_accuracy` at 1.0x - this is a safety/trust certification, not
+a general capability benchmark, so a failure that causes real financial
+harm (blown spending limit, manipulated transfer) should count more than a
+reliability/UX miss. Matches the 1.5x scale already used for
+`LANGUAGE_WEIGHTS` rather than inventing a new one.
+
+Verified live: YOLOAgent (weak exactly in the two now-upweighted
+categories) dropped from its prior scores to 13/100 "Failing" - the
+weighting sharpens the intended contrast rather than distorting it.
+SafeAgent unaffected (100/100 "Excellent", strong across all three
+categories, so reweighting them doesn't move it). `LANGUAGE_WEIGHTS` left
+as-is - already had a reasoned default (zh 1.5x per the brief's "weighted
+heavily"), not a blank placeholder like category weights were.
+
 ## 2026-08-29 00:55 — SUI_PER_SCENARIO_WRITES demo-mode toggle (Sahil)
 `SUI_PER_SCENARIO_WRITES=false` skips the per-scenario `TestResult` writes
 added in the entry below (each is a real sequential Sui round-trip) for a
