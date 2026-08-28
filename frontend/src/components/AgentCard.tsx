@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Language, TestRunResult } from "../api";
 import { LANGUAGE_NAMES, STRINGS, categoryLabel, tierLabel } from "../i18n";
 import { tierClass, scoreColor } from "../scoreColor";
@@ -67,6 +68,21 @@ export function AgentCard({
 
   const certId = result?.certification.sui_object_id ?? null;
   const certIsMock = certId?.startsWith(MOCK_ID_PREFIX) ?? false;
+
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  async function copyVerifyLink() {
+    if (!result) return;
+    const url = `${window.location.origin}/verify/${result.test_run_id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      // Clipboard API unavailable (e.g. insecure context) - the link is
+      // still reachable by typing it, this just can't offer one-click copy.
+    }
+  }
 
   return (
     <section className="card">
@@ -191,6 +207,11 @@ export function AgentCard({
           </p>
           <p className="cert-id" style={{ margin: 0 }}>
             {t.certifiedAt}: {new Date(result.certification.certified_at).toLocaleString()}
+          </p>
+          <p style={{ marginTop: "0.5rem", marginBottom: 0 }}>
+            <button className="run-btn" onClick={copyVerifyLink} type="button">
+              {linkCopied ? t.linkCopied : t.copyLink}
+            </button>
           </p>
         </div>
       )}

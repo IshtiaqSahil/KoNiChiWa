@@ -76,6 +76,16 @@ interface Strings {
   tierNames: Record<string, string>;
   agentNotes: Record<string, string>;
   footnote: string;
+
+  verifyIntro: string;
+  verifyBack: string;
+  verifyLoading: string;
+  verifyNotFound: string;
+  verifyNotConfigured: string;
+  verifyRunning: string;
+  verifyFailed: (reason: string) => string;
+  copyLink: string;
+  linkCopied: string;
 }
 
 const en: Strings = {
@@ -134,6 +144,16 @@ const en: Strings = {
   },
   footnote:
     "Language stability is 100 minus the spread between the best and worst language average. It multiplies into the final score, and is written on-chain as AgentCertification.multilingual_stability.",
+
+  verifyIntro: "Independently verifiable certification result — anyone with this link can check it.",
+  verifyBack: "← Back to dashboard",
+  verifyLoading: "Loading…",
+  verifyNotFound: "No certification found for this link.",
+  verifyNotConfigured: "Supabase isn't configured, so this link can't be resolved here.",
+  verifyRunning: "This test run is still in progress — check back shortly.",
+  verifyFailed: (reason) => `This test run failed: ${reason}`,
+  copyLink: "Copy verification link",
+  linkCopied: "Link copied",
 };
 
 const zh: Strings = {
@@ -192,6 +212,16 @@ const zh: Strings = {
   },
   footnote:
     "多语言稳定性 = 100 减去最高与最低语言均分之差，直接参与最终分数计算，并作为 AgentCertification.multilingual_stability 写入链上。",
+
+  verifyIntro: "可独立验证的认证结果 — 任何持有此链接的人都可以查看。",
+  verifyBack: "← 返回仪表盘",
+  verifyLoading: "加载中…",
+  verifyNotFound: "未找到该链接对应的认证结果。",
+  verifyNotConfigured: "Supabase 未配置，无法在此解析该链接。",
+  verifyRunning: "该测试运行仍在进行中 — 请稍后再查看。",
+  verifyFailed: (reason) => `该测试运行失败：${reason}`,
+  copyLink: "复制验证链接",
+  linkCopied: "链接已复制",
 };
 
 const ja: Strings = {
@@ -250,6 +280,16 @@ const ja: Strings = {
   },
   footnote:
     "多言語安定性は、最高スコアの言語と最低スコアの言語の差を 100 から引いた値です。最終スコアに乗算され、AgentCertification.multilingual_stability としてチェーン上に記録されます。",
+
+  verifyIntro: "独立して検証可能な認証結果 — このリンクを持つ誰でも確認できます。",
+  verifyBack: "← ダッシュボードに戻る",
+  verifyLoading: "読み込み中…",
+  verifyNotFound: "このリンクに対応する認証結果が見つかりません。",
+  verifyNotConfigured: "Supabase が未設定のため、このリンクをここで解決できません。",
+  verifyRunning: "このテスト実行はまだ進行中です — しばらくしてから再度ご確認ください。",
+  verifyFailed: (reason) => `このテスト実行は失敗しました：${reason}`,
+  copyLink: "検証リンクをコピー",
+  linkCopied: "リンクをコピーしました",
 };
 
 export const STRINGS: Record<Language, Strings> = { en, zh, ja };

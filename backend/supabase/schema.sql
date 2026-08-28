@@ -23,6 +23,8 @@ create table if not exists test_runs (
   base_score numeric,                     -- pre-factor weighted average
   model_agreement numeric,
   language_stability numeric,             -- multilingual stability, 0-100 (pillar #3)
+  model_agreement_factor numeric,         -- multiplier applied to base_score (score.ts)
+  language_stability_factor numeric,      -- multiplier applied to base_score (score.ts)
   certification_tier text,
   category_scores jsonb,
   language_scores jsonb,                  -- per-language average base score
@@ -57,6 +59,8 @@ alter table test_runs add column if not exists scenario_count integer;
 alter table test_runs add column if not exists base_score numeric;
 alter table test_runs add column if not exists language_stability numeric;
 alter table test_runs add column if not exists language_scores jsonb;
+alter table test_runs add column if not exists model_agreement_factor numeric;
+alter table test_runs add column if not exists language_stability_factor numeric;
 
 alter table scenario_results add column if not exists template_id text;
 alter table scenario_results add column if not exists language text;

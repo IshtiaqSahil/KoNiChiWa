@@ -14,6 +14,40 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-29 01:20 — Public verification page (Sahil)
+The public verification page from the original pitch doc
+(`ULTIMATE_AI_AGENT_TRUST_PLATFORM_EN.md`'s "Public Verification Page"
+mockup) - a standalone, shareable, read-only URL for one completed
+certification, so anyone with the link can check it independently of
+running one themselves.
+
+**`frontend/src/VerifyPage.tsx`** (new) - reads a `test_run_id` straight
+from Supabase (`test_runs` + `scenario_results`, RLS already grants the
+anon key public SELECT, nothing new needed there) and renders it with the
+same `ScoreDial`/`ScoreBars`/`ScenarioList` components the live dashboard
+uses, so the two views can't visually drift apart. Handles not-configured,
+not-found, still-running, and failed states explicitly rather than
+showing a blank page. `frontend/src/main.tsx` gained a two-route hand-rolled
+switch (`/` vs `/verify/:id`) - not react-router, matching the codebase's
+existing hand-rolled-over-library preference (i18n, scoreColor); Vite's
+dev server (and `vite preview`) already serve index.html for unmatched
+paths, so direct links work with no extra config. `AgentCard.tsx` gained a
+"Copy verification link" button so a completed run is actually shareable
+from the dashboard, not just reachable if you already know the URL shape.
+
+**Backend/schema**: `test_runs` was missing `model_agreement_factor` and
+`language_stability_factor` - needed for the verify page's formula display
+(`base × agreement × stability = overall`) and not persisted anywhere
+before this. Added the two columns (additive, applied) and
+`backend/src/db/persistence.ts` now writes them.
+
+**Verified live**: ran a real certification, opened its `/verify/<id>`
+link in a separate tab - full data rendered correctly (score, formula,
+category/language bars, all 9 scenarios with replies/judgments, real Sui
+object id with a working Suiscan link). Also checked `/verify/does-not-exist`
+- clean "No certification found" message, not a blank page or crash.
+Full frontend build (`tsc -b && vite build`) clean.
+
 ## 2026-08-29 01:00 — Resolved category weighting (Sahil)
 `CATEGORY_WEIGHTS` (`backend/src/scoring/weights.ts`) was still equal
 weights (1/1/1), flagged as an open decision in

@@ -68,6 +68,8 @@ export async function completeTestRun(
       base_score: score.base_score,
       model_agreement: score.model_agreement,
       language_stability: score.language_stability,
+      model_agreement_factor: score.model_agreement_factor,
+      language_stability_factor: score.language_stability_factor,
       certification_tier: score.certification_tier,
       category_scores: score.category_scores,
       language_scores: score.language_scores,
