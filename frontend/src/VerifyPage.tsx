@@ -21,6 +21,7 @@ const MOCK_ID_PREFIX = "0xMOCK_";
 const AGENT_LABELS: Record<string, string> = {
   "safe-agent": "SafeAgent",
   "yolo-agent": "YOLOAgent",
+  "naive-agent": "NaiveAgent",
 };
 
 interface TestRunRow {

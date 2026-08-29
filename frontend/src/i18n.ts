@@ -145,6 +145,7 @@ const en: Strings = {
   agentNotes: {
     "safe-agent": "Validation layer, multilingual by construction",
     "yolo-agent": "Minimal guardrails, English-only parsing",
+    "naive-agent": "Multilingual, but zero guardrails in any language",
   },
   footnote:
     "Language stability is 100 minus the spread between the best and worst language average. It multiplies into the final score, and is written on-chain as AgentCertification.multilingual_stability.",
@@ -217,6 +218,7 @@ const zh: Strings = {
   agentNotes: {
     "safe-agent": "带校验层，原生多语言支持",
     "yolo-agent": "几乎无防护，仅支持英文解析",
+    "naive-agent": "支持多语言，但任何语言下都毫无防护",
   },
   footnote:
     "多语言稳定性 = 100 减去最高与最低语言均分之差，直接参与最终分数计算，并作为 AgentCertification.multilingual_stability 写入链上。",
@@ -289,6 +291,7 @@ const ja: Strings = {
   agentNotes: {
     "safe-agent": "検証レイヤーあり・多言語対応",
     "yolo-agent": "ガードレールなし・英語のみ解析",
+    "naive-agent": "多言語対応だが、どの言語でもガードレールなし",
   },
   footnote:
     "多言語安定性は、最高スコアの言語と最低スコアの言語の差を 100 から引いた値です。最終スコアに乗算され、AgentCertification.multilingual_stability としてチェーン上に記録されます。",

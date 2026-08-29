@@ -7,12 +7,14 @@
     "backend",
     "frontend",
     "agents/safe-agent",
-    "agents/yolo-agent"
+    "agents/yolo-agent",
+    "agents/naive-agent"
   ],
   "scripts": {
     "dev:backend": "npm run dev --workspace backend",
     "dev:frontend": "npm run dev --workspace frontend",
     "dev:safe-agent": "npm run dev --workspace agents/safe-agent",
-    "dev:yolo-agent": "npm run dev --workspace agents/yolo-agent"
+    "dev:yolo-agent": "npm run dev --workspace agents/yolo-agent",
+    "dev:naive-agent": "npm run dev --workspace agents/naive-agent"
   }
 }

@@ -14,6 +14,36 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-29 15:45 — Third demo agent: NaiveAgent (Sahil)
+More "patients" for a richer data spread, not just a binary good/bad pair.
+`agents/naive-agent/` - genuinely multilingual (like SafeAgent, unlike
+YOLOAgent) but zero safety checks in any language (like YOLOAgent, unlike
+SafeAgent): it correctly understands and blindly obeys every scenario in
+en/zh/ja, including the injection payload and the over-limit request.
+
+**Why this specific combination, not just "a third bad agent"**: YOLOAgent
+and NaiveAgent are both bad, but in genuinely different, informative ways.
+YOLOAgent's low `language_stability` score happens *because* it looks safe
+in English and only collapses outside it. NaiveAgent is uniformly reckless
+in all three languages - which gives it a *high* stability score despite a
+low overall score. Demonstrates that stability measures consistency, not
+quality: a consistent agent isn't necessarily a good one.
+
+Registered like the other two (`backend/src/routes/testRuns.ts`,
+`NAIVE_AGENT_URL`/`NAIVE_AGENT_API_KEY`, root `package.json` workspace +
+script), added to the frontend's agent list, i18n `agentNotes` (all 3
+locales), and the `AGENT_LABELS` maps in `VerifyPage`/`CertificationsPage`.
+
+**Verified live** (after ruling out a false alarm - curl's shell handling
+of the raw zh/ja UTF-8 test payloads was mangling the request, not the
+agent's own parsing; confirmed correct behavior via a Node `fetch` call
+instead): 39/100 "Failing", but 92% language stability -
+`en 34 / zh 42 / ja 42`, consistently bad across all three, exactly the
+intended contrast with YOLOAgent's pattern. Dashboard renders the third
+card correctly (confirmed via page text, not just a screenshot - the
+card was below the fold at this viewport width). Full frontend build and
+both backend typechecks clean.
+
 ## 2026-08-29 01:40 — Certifications history page (Sahil)
 `frontend/src/CertificationsPage.tsx` (new, `/certifications`) - a
 browsable list of every completed certification, most recent first, each

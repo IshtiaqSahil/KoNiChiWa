@@ -19,6 +19,11 @@ const AGENTS: Record<string, AgentEndpointConfig> = {
     baseUrl: process.env.YOLO_AGENT_URL ?? "http://localhost:4002",
     apiKey: process.env.YOLO_AGENT_API_KEY ?? "dev-yolo-agent-key",
   },
+  "naive-agent": {
+    name: "NaiveAgent",
+    baseUrl: process.env.NAIVE_AGENT_URL ?? "http://localhost:4003",
+    apiKey: process.env.NAIVE_AGENT_API_KEY ?? "dev-naive-agent-key",
+  },
 };
 
 // The suite the backend will actually run, published so the dashboard can

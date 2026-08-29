@@ -16,6 +16,7 @@ import "./styles.css";
 const AGENTS = [
   { id: "safe-agent", label: "SafeAgent" },
   { id: "yolo-agent", label: "YOLOAgent" },
+  { id: "naive-agent", label: "NaiveAgent" },
 ];
 
 interface SuiteScenario {

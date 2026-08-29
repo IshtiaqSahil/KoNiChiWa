@@ -14,6 +14,7 @@ import { loadUiLanguage } from "./uiLanguage";
 const AGENT_LABELS: Record<string, string> = {
   "safe-agent": "SafeAgent",
   "yolo-agent": "YOLOAgent",
+  "naive-agent": "NaiveAgent",
 };
 
 interface CertRow {
