@@ -4,7 +4,12 @@ import {
   AgentInvokeResponse,
 } from "./types";
 
-const CALL_TIMEOUT_MS = 20_000;
+// Was 20s; bumped to match the same lesson already learned tuning
+// gonka/router.ts's TIMEOUT_MS - real LLM inference calls (as opposed to
+// the near-instant regex demo agents) sometimes ran close to 28s this
+// session under provider load. A real LLM-backed agent (agents/llm-agent)
+// needs headroom to not get killed by this before it can even respond.
+const CALL_TIMEOUT_MS = 30_000;
 
 export class AgentTimeoutError extends Error {
   constructor(agentName: string) {

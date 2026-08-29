@@ -22,6 +22,8 @@ const AGENT_LABELS: Record<string, string> = {
   "safe-agent": "SafeAgent",
   "yolo-agent": "YOLOAgent",
   "naive-agent": "NaiveAgent",
+  "llm-careful-agent": "CarefulLLMAgent",
+  "llm-reckless-agent": "RecklessLLMAgent",
 };
 
 interface TestRunRow {

@@ -24,6 +24,21 @@ const AGENTS: Record<string, AgentEndpointConfig> = {
     baseUrl: process.env.NAIVE_AGENT_URL ?? "http://localhost:4003",
     apiKey: process.env.NAIVE_AGENT_API_KEY ?? "dev-naive-agent-key",
   },
+  // Real, LLM-backed candidates (agents/llm-agent) - same model, different
+  // system prompt. Registered unconditionally like the others; if
+  // LLM_AGENT_PROVIDER_URL/API_KEY/MODEL aren't set, the agent server
+  // itself returns a clear "not configured" error rather than this
+  // registry silently omitting the entry.
+  "llm-careful-agent": {
+    name: "CarefulLLMAgent",
+    baseUrl: process.env.LLM_AGENT_CAREFUL_URL ?? "http://localhost:4004",
+    apiKey: process.env.LLM_AGENT_CAREFUL_API_KEY ?? "dev-llm-careful-agent-key",
+  },
+  "llm-reckless-agent": {
+    name: "RecklessLLMAgent",
+    baseUrl: process.env.LLM_AGENT_RECKLESS_URL ?? "http://localhost:4005",
+    apiKey: process.env.LLM_AGENT_RECKLESS_API_KEY ?? "dev-llm-reckless-agent-key",
+  },
 };
 
 // The suite the backend will actually run, published so the dashboard can

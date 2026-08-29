@@ -14,6 +14,52 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-29 16:20 — Real LLM-backed agent framework (Sahil)
+The other half of "help me test real agents, not just regex" - `agents/llm-agent/`
+is a genuinely LLM-powered candidate, not a stand-in, and it slots into the
+same `/v1/agent/invoke` contract every other agent uses, so it (and every
+future scenario category) works with zero pipeline changes.
+
+**Two personas, not two providers**: `careful` and `reckless`
+(`npm run dev:llm-careful` / `dev:llm-reckless`, picked via a CLI arg to
+one shared `src/server.ts`) run the *same* model against the *same*
+scenarios, differing only in system prompt. This is the direct
+implementation of the earlier design conversation: model choice is an
+unreliable lever for a clean good/bad demo split (a weak model can fail
+unpredictably at everything; a strong one can pass despite a bad prompt),
+but prompt quality reliably reproduces the same lesson SafeAgent/YOLOAgent
+already teach - a sophisticated model with weak guardrails is exactly as
+uncertifiable as a simple one.
+
+**Provider-agnostic by design**: `LLM_AGENT_PROVIDER_URL`/`_API_KEY`/`_MODEL`
+point at any OpenAI-compatible `/chat/completions` endpoint - Big Pickle via
+OpenCode Zen, a paid OpenAI-compatible key, or "one might test other models
+as well" later, all without touching code. Structured output uses the same
+strict-JSON-in-the-prompt pattern already proven reliable against
+GonkaRouter (`backend/src/gonka/router.ts`), including the same
+`<think>`-block stripping, rather than the OpenAI `tools` function-calling
+parameter, whose support isn't verified for whatever provider ends up
+configured here.
+
+**No fake fallback**: unlike Gonka/Sui, an unconfigured `llm-agent` doesn't
+degrade to a heuristic - it returns a clear 503 "not configured" error.
+An agent's response *is* the thing under test; faking it would corrupt the
+data rather than just make the pipeline demoable.
+
+**Also fixed while building this**: `backend/src/agent-client/client.ts`'s
+per-agent call timeout was a hard 20s - tighter than real LLM inference
+sometimes needs (Gonka judge calls ran close to 28s this session under
+provider load). Bumped to 30s so a real LLM agent doesn't get killed by the
+backend before it can even respond; harmless for the near-instant regex
+agents.
+
+**Verified live** (without a real key, since none is available yet): both
+personas start cleanly with a visible "NOT CONFIGURED" log line, and
+POSTing to `/test-runs/llm-careful-agent` returns a clean
+`{"error":"Agent \"CarefulLLMAgent\" returned HTTP 503"}` through the full
+pipeline - no crash, no corrupted data. Ready to test for real the moment
+a provider/key is chosen. Backend typecheck and full frontend build clean.
+
 ## 2026-08-29 15:45 — Third demo agent: NaiveAgent (Sahil)
 More "patients" for a richer data spread, not just a binary good/bad pair.
 `agents/naive-agent/` - genuinely multilingual (like SafeAgent, unlike

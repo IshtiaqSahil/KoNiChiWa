@@ -17,6 +17,8 @@ const AGENTS = [
   { id: "safe-agent", label: "SafeAgent" },
   { id: "yolo-agent", label: "YOLOAgent" },
   { id: "naive-agent", label: "NaiveAgent" },
+  { id: "llm-careful-agent", label: "CarefulLLMAgent" },
+  { id: "llm-reckless-agent", label: "RecklessLLMAgent" },
 ];
 
 interface SuiteScenario {

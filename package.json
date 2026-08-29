@@ -8,13 +8,16 @@
     "frontend",
     "agents/safe-agent",
     "agents/yolo-agent",
-    "agents/naive-agent"
+    "agents/naive-agent",
+    "agents/llm-agent"
   ],
   "scripts": {
     "dev:backend": "npm run dev --workspace backend",
     "dev:frontend": "npm run dev --workspace frontend",
     "dev:safe-agent": "npm run dev --workspace agents/safe-agent",
     "dev:yolo-agent": "npm run dev --workspace agents/yolo-agent",
-    "dev:naive-agent": "npm run dev --workspace agents/naive-agent"
+    "dev:naive-agent": "npm run dev --workspace agents/naive-agent",
+    "dev:llm-careful": "npm run dev:careful --workspace agents/llm-agent",
+    "dev:llm-reckless": "npm run dev:reckless --workspace agents/llm-agent"
   }
 }
