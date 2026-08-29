@@ -14,6 +14,39 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-29 18:05 — Fix llm-agent not loading root .env; document OpenRouter option (Claude)
+`agents/llm-agent`'s `package.json` scripts were the only ones in the
+workspace missing `--env-file=../../.env` (compare `backend/package.json`,
+which has it) - so `LLM_AGENT_PROVIDER_URL`/`_API_KEY`/`_MODEL` were silently
+never read even once set in `.env`. All four scripts (`dev:careful`,
+`dev:reckless`, `start:careful`, `start:reckless`) now load it, matching
+backend's pattern.
+
+`.env.example` now calls out OpenRouter (`https://openrouter.ai/api/v1`) as
+a concrete option alongside the existing "Big Pickle via OpenCode Zen"
+mention, since it's the OpenAI-compatible router this agent's
+provider-agnostic design was built for.
+
+**Provider evaluation this session** (not landed in `.env` - still being
+decided): tried OpenRouter with several models live against
+`/v1/agent/invoke` - `meta-llama/llama-3.3-70b-instruct` needs purchased
+credits (402), its `:free` variant is deprecated (404), and two other
+`:free` models (`z-ai/glm-5.2`, `google/gemma-4-26b-a4b-it`) hit shared-pool
+rate limits (429) - OpenRouter's free tier is largely unreliable capacity,
+not a wiring problem (confirmed via `/auth/key`: this account's own request
+count was nowhere near its daily cap). `minimax/minimax-m3:free` worked and
+passed both the injection-refusal and legit-transfer scenarios end-to-end,
+but replied in German to an English message - a real rule-6 (reply in the
+user's language) violation from a small free model, not a bug in this repo.
+Also tried OpenCode Zen (`https://opencode.ai/zen/v1`, model `big-pickle`)
+with a supplied key - rejected with `AuthError: Invalid API key`, key
+likely mistyped or needs regenerating. Final provider/model choice is
+pending - `LLM_AGENT_PROVIDER_URL`/`_API_KEY`/`_MODEL` are unset in the
+version-controlled `.env.example`; whoever picks this back up should reread
+this entry before re-testing.
+
+---
+
 ## 2026-08-29 16:20 — Real LLM-backed agent framework (Sahil)
 The other half of "help me test real agents, not just regex" - `agents/llm-agent/`
 is a genuinely LLM-powered candidate, not a stand-in, and it slots into the
