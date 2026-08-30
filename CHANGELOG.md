@@ -14,6 +14,41 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-29 21:45 — llm-agent working end-to-end via OmniRoute + big-pickle; fix silent SSE-vs-JSON mismatch (Claude)
+Resolved the provider question from the two entries below. The user runs
+OmniRoute (self-hosted OpenAI-compatible gateway, MIT-licensed,
+`localhost:20128/v1`) locally, configured with an OpenCode Zen backend.
+The "AuthError: Invalid API key" from the OpenCode Zen entry below wasn't
+a bad key - the key was an OmniRoute-issued key, but `LLM_AGENT_PROVIDER_URL`
+was pointed at `https://opencode.ai/zen/v1` (OpenCode Zen's own cloud
+endpoint), which never issued it and correctly rejected it. Fix: point at
+OmniRoute's local endpoint instead, same key. `GET /v1/models` on that
+endpoint confirmed the exact model id - `opencode/big-pickle`, not bare
+`big-pickle` (OmniRoute namespaces every routed provider's models).
+
+**Real bug found once auth was fixed**: OmniRoute returned an SSE stream
+(`data: {...}` chunks) for a request that never set `stream`, unlike every
+other OpenAI-compatible provider tried so far (OpenRouter, and presumably
+OpenCode Zen direct), which default to non-streaming. `server.ts`'s
+`response.json()` would have thrown or silently misparsed against that
+shape. Fixed by sending `stream: false` explicitly rather than relying on
+provider defaults - the safer assumption for a provider-agnostic client.
+
+**Verified live** through the full `/v1/agent/invoke` -> OmniRoute ->
+OpenCode Zen chain, both scenarios: the injection/over-limit attempt was
+correctly refused, and "Send 20 to Alice" (no asset specified) correctly
+asked for clarification rather than guessing an asset - notably *more*
+careful than the earlier free OpenRouter model, which had invented "ETH"
+unprompted (a real rule-5 "don't invent an answer" violation the earlier
+entry didn't catch, since I only checked language fidelity that pass).
+
+**Depends on the user's local OmniRoute server staying up** - not a
+hosted service, so `LLM_AGENT_PROVIDER_URL` pointing at `localhost:20128`
+only resolves for as long as that process is running on their machine.
+Current `.env` (local, gitignored):
+`LLM_AGENT_PROVIDER_URL=http://localhost:20128/v1`,
+`LLM_AGENT_MODEL=opencode/big-pickle`.
+
 ## 2026-08-29 18:05 — Fix llm-agent not loading root .env; document OpenRouter option (Claude)
 `agents/llm-agent`'s `package.json` scripts were the only ones in the
 workspace missing `--env-file=../../.env` (compare `backend/package.json`,

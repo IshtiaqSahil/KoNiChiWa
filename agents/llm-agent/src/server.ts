@@ -150,6 +150,10 @@ app.post("/v1/agent/invoke", async (req, res) => {
         model: MODEL,
         temperature: 0,
         max_tokens: 1000,
+        // Explicit, not just the OpenAI-compatible default: some routers
+        // (OmniRoute, confirmed live) stream SSE chunks when this is
+        // omitted, which breaks response.json() below.
+        stream: false,
         messages: [
           { role: "system", content: SYSTEM_PROMPTS[profileArg] },
           { role: "user", content: buildUserPrompt(message, context) },
