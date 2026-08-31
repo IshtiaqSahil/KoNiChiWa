@@ -123,6 +123,67 @@ function parseModelOutput(content: string): { reply: string; action: AgentAction
   return { reply: parsed.reply, action: parsed.action.type === "none" ? null : parsed.action };
 }
 
+class ProviderError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message);
+  }
+}
+
+// big-pickle's free tier via OpenCode Zen/OmniRoute 429s under back-to-back
+// calls even fully serialized (SCENARIO_CONCURRENCY=1), confirmed live -
+// this throttles this agent's own outbound rate regardless of how fast the
+// orchestrator fires requests. Kept under backend/src/agent-client/client.ts's
+// 30s per-call budget: worst case (fail fast, retry) is ~2x this plus two
+// fast provider round-trips, well under 30s.
+const MIN_CALL_INTERVAL_MS = 8_000;
+let lastCallAt = 0;
+
+async function throttle(): Promise<void> {
+  const wait = lastCallAt + MIN_CALL_INTERVAL_MS - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastCallAt = Date.now();
+}
+
+async function callProvider(
+  message: string,
+  context: { wallet_balance: number; spending_limit: number; contacts: WalletContact[] }
+): Promise<{ reply: string; action: AgentAction | null }> {
+  await throttle();
+  const response = await fetch(`${PROVIDER_URL!.replace(/\/$/, "")}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${PROVIDER_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      temperature: 0,
+      max_tokens: 1000,
+      // Explicit, not just the OpenAI-compatible default: some routers
+      // (OmniRoute, confirmed live) stream SSE chunks when this is
+      // omitted, which breaks response.json() below.
+      stream: false,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPTS[profileArg] },
+        { role: "user", content: buildUserPrompt(message, context) },
+      ],
+    }),
+    signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+  });
+
+  if (!response.ok) {
+    throw new ProviderError(`Provider returned HTTP ${response.status}: ${await response.text()}`, response.status);
+  }
+
+  const body = await response.json();
+  const content = body?.choices?.[0]?.message?.content;
+  if (typeof content !== "string") {
+    throw new ProviderError(`Unexpected provider response shape: ${JSON.stringify(body).slice(0, 200)}`);
+  }
+
+  return parseModelOutput(content);
+}
+
 app.post("/v1/agent/invoke", async (req, res) => {
   if (req.header("X-Api-Key") !== API_KEY) {
     res.status(401).json({ error: "invalid api key" });
@@ -140,40 +201,22 @@ app.post("/v1/agent/invoke", async (req, res) => {
   const { message, context } = req.body;
 
   try {
-    const response = await fetch(`${PROVIDER_URL.replace(/\/$/, "")}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${PROVIDER_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0,
-        max_tokens: 1000,
-        // Explicit, not just the OpenAI-compatible default: some routers
-        // (OmniRoute, confirmed live) stream SSE chunks when this is
-        // omitted, which breaks response.json() below.
-        stream: false,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPTS[profileArg] },
-          { role: "user", content: buildUserPrompt(message, context) },
-        ],
-      }),
-      signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Provider returned HTTP ${response.status}: ${await response.text()}`);
+    try {
+      res.json(await callProvider(message, context));
+    } catch (err) {
+      // Retry once on a transient failure: 5xx, a network/timeout error
+      // with no HTTP status at all, or 429 - free-tier endpoints (OpenCode
+      // Zen's big-pickle/laguna-s-2.1-free via OmniRoute, observed live)
+      // intermittently 502/503 "Endpoint is unavailable" or 429s even one
+      // call at a time. Other 4xx (bad key, bad request) aren't retried
+      // since an
+      // identical second call won't fix those. callProvider()'s own
+      // throttle() naturally spaces the retry out from the failed attempt.
+      const status = err instanceof ProviderError ? err.status : undefined;
+      if (status !== undefined && status < 500 && status !== 429) throw err;
+      console.error(`[llm-agent:${profileArg}] call failed, retrying once:`, err);
+      res.json(await callProvider(message, context));
     }
-
-    const body = await response.json();
-    const content = body?.choices?.[0]?.message?.content;
-    if (typeof content !== "string") {
-      throw new Error(`Unexpected provider response shape: ${JSON.stringify(body).slice(0, 200)}`);
-    }
-
-    const { reply, action } = parseModelOutput(content);
-    res.json({ reply, action });
   } catch (err) {
     console.error(`[llm-agent:${profileArg}] call failed:`, err);
     res.status(502).json({ error: err instanceof Error ? err.message : "Unknown error" });
