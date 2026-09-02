@@ -7,7 +7,7 @@ interface Props {
 // Circular gauge for the headline trust score. Inline SVG rather than a
 // charting dependency - it is one arc, and the whole dashboard has exactly
 // one of them.
-export function ScoreDial({ score, color, size = 104 }: Props) {
+export function ScoreDial({ score, color, size = 116 }: Props) {
   const stroke = 8;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -27,7 +27,7 @@ export function ScoreDial({ score, color, size = 104 }: Props) {
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="var(--bg-inset)"
+        stroke="var(--track)"
         strokeWidth={stroke}
       />
       <circle
@@ -50,8 +50,8 @@ export function ScoreDial({ score, color, size = 104 }: Props) {
         dominantBaseline="central"
         fill="var(--text)"
         fontSize={size * 0.3}
-        fontWeight="650"
-        fontFamily="var(--font-mono)"
+        fontWeight="700"
+        fontFamily="var(--font)"
       >
         {score}
       </text>

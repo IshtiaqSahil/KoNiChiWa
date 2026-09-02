@@ -14,6 +14,113 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-08-31 — Dashboard polish, round 2: compact pending state, agent-kind badge, micro-interactions (Claude)
+Follow-up to the entry below, from "polish it more" - fixes to things
+that were still visually rough even after the token-level redesign,
+found by looking at the live dashboard with fresh eyes rather than
+re-reading the CSS.
+
+**The pending scenario list was the loudest thing on an empty page.**
+Before any run starts, all five cards show all 9 scenarios in full
+3-line form (mono id / message+tag / nothing yet) - the least
+interesting content on the page taking the most space, pushing the
+actual "Run certification" CTA below the fold. `.scenario.pending` now
+hides the id line and collapses to one line per row (message + language
+tag only) - the id becomes useful once there's a score to cross-
+reference it against, not before. All 9 scenarios now fit in one card
+without scrolling.
+
+**Agent cards had no visual differentiation** beyond their name and
+note text - SafeAgent and YOLOAgent read as identical boxes at a glance.
+Added a small `LLM` badge next to CarefulLLMAgent/RecklessLLMAgent's
+names (`agents/*` -> `.kind-tag`, `AgentCard.tsx`). Deliberately describes
+what the agent *is* (a real model call vs. a rule-based stub) and not how
+it performs - a shield/warning icon implying "safe" or "risky" before a
+single scenario has run would have pre-judged the exact thing this
+platform exists to measure objectively.
+
+**Small interaction polish**: a play-triangle icon on "Run certification"
+(hidden while running, so it doesn't sit stale next to "Running…"); a
+scenario-count badge on the "Scenarios" section header; a subtle pulse
+animation on the "Live progress on" status dot; hover feedback on
+scenario rows; `.run-btn.secondary` variant so "Copy verification link"
+reads as a secondary action next to the primary trust-score display,
+not a second equally-weighted CTA.
+
+**Verified live**: ran NaiveAgent's full 9-scenario suite end to end
+post-change - confirms the `--fail` colour fix from the entry below in
+its actual intended scenario (a genuinely weak agent, 37/100, permission
+compliance and injection resistance both at 12): both low bars render
+as clearly visible dark blue against the track, not the near-invisible
+grey the old palette produced. `npx tsc -b` and `npx vite build` both
+clean.
+
+## 2026-08-31 — Dashboard visual redesign: professional polish pass (Claude)
+"Make the web app look more professional" - a design-system pass over
+`frontend/src/styles.css` plus small follow-on edits in `ScoreDial.tsx`
+(class names/props unchanged elsewhere, so `VerifyPage.tsx` and
+`CertificationsPage.tsx` inherit every change automatically - they share
+the same components and stylesheet).
+
+**Font: Times New Roman -> system sans.** The previous dashboard-visual-
+pass entry (2026-08-28, Junmeng) deliberately chose Times New Roman "per
+request" - flagging here that this reverses it, in case that was a team
+brand decision rather than a preference: I switched to a system sans
+stack (`-apple-system, "Segoe UI", Roboto, ...`) because a trust-
+certification console reads as a software product, not an editorial
+page, and the dataviz skill's own reference palette is explicit that
+"everything - including the hero figure - stays in the system sans...
+no display or serif face anywhere." CJK fallback fonts are unchanged
+(same names, just now chained after a sans face instead of a serif one) -
+Chinese/Japanese agent replies still render in a real CJK face, not tofu.
+
+**Status palette was actually broken, not just dated - validated with
+`scripts/validate_palette.js`, not eyeballed.** The old three colours
+(`#4c8dff`/`#8b7ff5`/`#4b4f58` for pass/warn/fail) failed two real checks:
+pass vs warn measured ΔE 7.6 on the normal-vision floor (below 15 - "hard
+to tell apart even with full colour vision"), and fail sat below both the
+chroma floor (read as flat grey) and the 3:1 contrast floor against the
+card surface - meaning the worst-scoring bar on the page was the *least*
+visible one, backwards for what this platform is for. Replaced with a
+validated single-hue ordinal ramp (`#6da7ec`/`#2a78d6`/`#184f95`, all
+pulled from the dataviz skill's pre-validated blue sequential ramp,
+re-checked with `--ordinal` against this app's actual card surface) -
+keeps the team's original "cold, no red/amber traffic light" intent
+intact, just with numbers behind it. `--alert` (violet, "wrong language"
+flags) is unchanged - it already ships with a text label alongside the
+colour, which is what its CVD-warn-band separation from the new palette
+requires.
+
+**Meter tracks now read as "the same ramp, one step lighter"** (a
+translucent blue wash, new `--track` token) instead of a flat neutral
+grey - the dataviz skill's own meter contract ("the unfilled track is a
+lighter step of the same ramp, so state reads across the whole bar").
+Applied to `.progress-track`, `.bar-track`, and `ScoreDial`'s unfilled
+ring (was hardcoded to `var(--bg-inset)`).
+
+**Also**: card depth via `box-shadow` (elevation, not a background
+gradient - keeps the team's "flat black, no gradient" rule intact, since
+that rule was specifically about the page background, not card chrome);
+hover/focus states on buttons, chips, and cards; `tabular-nums` on
+number *columns* (bar values, judge scores, metric tiles) but not the
+score dial's hero number, per the dataviz skill's figure contract
+("proportional figures for big numbers, tabular only in columns"); a
+tighter, more compact masthead (wordmark 3.2rem -> 1.7rem - a product
+header, not an editorial title block); widened the category-bar label
+column (9.5rem -> 11.5rem) to stop "Prompt-injection resistance" from
+truncating, a pre-existing bug this pass happened to surface.
+
+**Verified live** in the browser (not just typechecked): ran full
+9-scenario suites for SafeAgent and checked the completed `VerifyPage`
+and `CertificationsPage` renders. Hit one real scare mid-check - bars
+appeared to render with zero visible fill (track and fill computing to
+the identical colour) - root-caused via `getComputedStyle` to a stale/
+frozen renderer on a browser tab that had been open and repeatedly
+navigated for the entire session (confirmed by reproducing the exact
+same `background: var(--pass)` assignment on a fresh tab, where it
+resolved correctly); not a CSS bug, closed the stale tab, re-verified
+clean. `npx tsc -b` and `npx vite build` both clean.
+
 ## 2026-08-30 17:10 — Full 9-scenario suite runs verified for both LLM personas; retry/throttle for free-tier flakiness (Claude)
 First fully successful automated test runs (not spot-checks) for
 CarefulLLMAgent and RecklessLLMAgent, through the real pipeline

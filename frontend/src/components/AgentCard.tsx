@@ -88,10 +88,18 @@ export function AgentCard({
     <section className="card">
       <div className="card-head">
         <div>
-          <h2 className="agent-name">{agentLabel}</h2>
+          <div className="agent-title">
+            <h2 className="agent-name">{agentLabel}</h2>
+            {agentId.startsWith("llm-") && <span className="kind-tag">LLM</span>}
+          </div>
           <p className="agent-note">{t.agentNotes[agentId] ?? agentId}</p>
         </div>
         <button className="run-btn" onClick={onRun} disabled={running}>
+          {!running && (
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
+              <path d="M1 0.5 L9 5 L1 9.5 Z" />
+            </svg>
+          )}
           {running ? t.running : result ? t.rerun : t.run}
         </button>
       </div>
@@ -178,7 +186,10 @@ export function AgentCard({
 
       {rows.length > 0 && (
         <>
-          <h3 className="section-title">{t.scenarios}</h3>
+          <h3 className="section-title">
+            {t.scenarios}
+            <span className="section-count">{rows.length}</span>
+          </h3>
           <ScenarioList
             rows={rows}
             wrongLanguageLabel={t.wrongLanguage}
@@ -209,7 +220,7 @@ export function AgentCard({
             {t.certifiedAt}: {new Date(result.certification.certified_at).toLocaleString()}
           </p>
           <p style={{ marginTop: "0.5rem", marginBottom: 0 }}>
-            <button className="run-btn" onClick={copyVerifyLink} type="button">
+            <button className="run-btn secondary" onClick={copyVerifyLink} type="button">
               {linkCopied ? t.linkCopied : t.copyLink}
             </button>
           </p>

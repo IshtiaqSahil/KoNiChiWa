@@ -5,7 +5,8 @@
 
 :root {
   /* Flat black, no gradient - every surface is a step of grey-black, no
-     colour tint mixed into the ground. */
+     colour tint mixed into the ground. Depth comes from border + shadow,
+     not from lightening the background. */
   --bg: #050506;
   --bg-raised: #101012;
   --bg-inset: #0a0a0b;
@@ -17,32 +18,57 @@
   --text-faint: #66666c;
 
   /* Cold, monochrome-leaning palette - no green/amber/red traffic light.
-     --accent is the one hue on the page; --pass/--warn/--fail are a single
-     blue scale stepping down to grey (see scoreColor.ts), and --alert is
-     the one deliberate departure, reserved for things that are genuinely
-     wrong (a failed request, a mismatched language) rather than "scored
-     low" - kept violet rather than red so it stays inside the cold family. */
+     --accent is the one UI-chrome hue (buttons, links, focus rings).
+     --pass/--warn/--fail are a single-hue ORDINAL ramp (light -> dark,
+     high score -> low score), not three unrelated hues: pulled from the
+     dataviz skill's validated blue sequential ramp and re-checked with
+     scripts/validate_palette.js --ordinal against this app's actual
+     surfaces. The previous three (#4c8dff/#8b7ff5/#4b4f58) failed that
+     check on two counts - pass vs warn measured ΔE 7.6 normal-vision
+     (below the 15 floor: hard to tell apart even with full colour
+     vision), and fail sat under both the chroma floor (read as flat grey)
+     and the 3:1 contrast floor against the card surface, so the worst
+     score was the *least* visible bar on the page - backwards for a
+     trust dashboard. --alert is the one deliberate hue departure,
+     reserved for things that are genuinely wrong (a failed request, a
+     mismatched language) rather than "scored low" - kept violet rather
+     than red so it stays inside the cold family; it always ships with a
+     text label alongside it (never colour alone), which is what its
+     CVD-warn-band separation from --warn requires. */
   --accent: #4c8dff;
-  --pass: #4c8dff;
-  --warn: #8b7ff5;
-  --fail: #4b4f58;
+  --accent-ink: #04101f;
+  --pass: #6da7ec;
+  --warn: #2a78d6;
+  --fail: #184f95;
   --alert: #b57bf2;
   --alert-soft: rgba(181, 123, 242, 0.14);
   --alert-border: rgba(181, 123, 242, 0.35);
 
+  /* Meter track: a lighter step of the *same* ramp, not a neutral grey -
+     "state reads across the whole bar" (dataviz skill, meter contract) -
+     rather than the fill looking like an unrelated colour dropped onto a
+     generic progress-bar track. */
+  --track: rgba(109, 167, 236, 0.14);
+
   --radius: 12px;
   --radius-sm: 8px;
+  --radius-lg: 16px;
 
-  /* Times New Roman per request, with a serif fallback stack for platforms
-     that lack it, then the same CJK faces as before - this dashboard
-     renders Chinese and Japanese agent replies verbatim, and Times New
-     Roman has no CJK glyphs, so those characters still fall through to a
-     real CJK face rather than tofu. Numerals and ids stay on --font-mono
-     (unchanged) since a serif digit stack reads worse in a formula or a
-     scenario id than in prose. */
-  --font: "Times New Roman", Times, Georgia, "Hiragino Kaku Gothic ProN",
-    "Yu Gothic UI", "Noto Sans CJK JP", "Microsoft YaHei", "PingFang SC", serif;
+  /* System sans, not a display/serif face - a trust-certification console
+     reads as a software product, not an editorial page, and a hero number
+     or stat-tile value "in the same sans as everything else" is the
+     dataviz skill's own figure contract. CJK faces stay in the fallback
+     chain unchanged: this dashboard renders Chinese and Japanese agent
+     replies verbatim, so those characters still need a real CJK face
+     rather than tofu. */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic UI",
+    "Noto Sans CJK JP", "Microsoft YaHei", "PingFang SC", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.55);
+  --shadow-card-hover: 0 1px 2px rgba(0, 0, 0, 0.45), 0 16px 36px -14px rgba(0, 0, 0, 0.65);
+  --shadow-focus: 0 0 0 3px rgba(76, 141, 255, 0.35);
 }
 
 * { box-sizing: border-box; }
@@ -55,14 +81,24 @@ body {
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.shell { max-width: 1180px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+a { color: var(--accent); }
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
+.shell { max-width: 1180px; margin: 0 auto; padding: 2.25rem 1.25rem 4rem; }
 
 /* --- header ---
-   Name and tagline both centered and enlarged so the masthead reads as a
-   title block rather than a toolbar; the language switch sits on top of it
-   in the corner so centering the text doesn't have to fight its width. */
+   A compact product masthead rather than an editorial title block: the
+   wordmark carries brand weight through letter-spacing and the accent
+   dot, not raw size, so the page opens on the status strip and agent
+   grid instead of a headline. */
 .masthead {
   position: relative;
   display: flex;
@@ -70,30 +106,41 @@ body {
   align-items: center;
   text-align: center;
   gap: 0.5rem;
-  padding: 1.5rem 0 1.75rem;
+  padding: 0.5rem 0 1.75rem;
   border-bottom: 1px solid var(--border);
 }
-.wordmark { font-size: 3.2rem; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.wordmark {
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
 .wordmark span { color: var(--accent); }
-.tagline { margin: 0; color: var(--text-dim); font-size: 1.15rem; max-width: 62ch; }
+.tagline { margin: 0; color: var(--text-dim); font-size: 0.98rem; max-width: 56ch; }
 
 .locale-switch {
-  position: absolute; top: 0.15rem; right: 0;
+  position: absolute; top: 0; right: 0;
   display: flex; border: 1px solid var(--border-strong); border-radius: 999px; overflow: hidden;
+  background: var(--bg-raised);
 }
 .locale-switch button {
   background: transparent; border: 0; color: var(--text-dim);
-  padding: 0.35rem 0.8rem; font: inherit; font-size: 0.82rem; cursor: pointer;
+  padding: 0.4rem 0.85rem; font: inherit; font-size: 0.8rem; font-weight: 500; cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
 }
-.locale-switch button[aria-pressed="true"] { background: var(--accent); color: #06090f; font-weight: 600; }
+.locale-switch button:hover { color: var(--text); }
+.locale-switch button[aria-pressed="true"] {
+  background: var(--accent); color: var(--accent-ink); font-weight: 650;
+}
 
 /* --- status strip --- */
-.status-strip { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 1.75rem; }
+.status-strip { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.25rem 0 1.75rem; }
 .chip {
   display: inline-flex; align-items: center; gap: 0.45rem;
   background: var(--bg-raised); border: 1px solid var(--border);
-  border-radius: 999px; padding: 0.3rem 0.75rem;
+  border-radius: 999px; padding: 0.35rem 0.8rem;
   font-size: 0.78rem; color: var(--text-dim);
+  transition: border-color 120ms ease, color 120ms ease;
 }
 /* Chips are mostly static status readouts, but the certifications link is
    a real <a> among them - match the rest rather than showing default link
@@ -101,8 +148,12 @@ body {
 a.chip { text-decoration: none; }
 a.chip:hover { border-color: var(--border-strong); color: var(--text); }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
-.dot.on { background: var(--pass); box-shadow: 0 0 0 3px rgba(76, 141, 255, 0.18); }
+.dot.on { background: var(--pass); box-shadow: 0 0 0 3px rgba(109, 167, 236, 0.18); animation: pulse-dot 2.4s ease-in-out infinite; }
 .dot.off { background: var(--warn); }
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(109, 167, 236, 0.18); }
+  50% { box-shadow: 0 0 0 5px rgba(109, 167, 236, 0.08); }
+}
 
 /* --- agent grid --- */
 .agent-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); }
@@ -111,25 +162,46 @@ a.chip:hover { border-color: var(--border-strong); color: var(--text); }
 .card {
   background: var(--bg-raised);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  padding: 1.4rem;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 180ms ease, border-color 180ms ease;
 }
+.card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-card-hover); }
 .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-.agent-name { margin: 0; font-size: 1.15rem; font-weight: 650; }
+.agent-title { display: flex; align-items: center; gap: 0.5rem; }
+.agent-name { margin: 0; font-size: 1.15rem; font-weight: 650; letter-spacing: -0.005em; }
 .agent-note { margin: 0.2rem 0 0; color: var(--text-faint); font-size: 0.8rem; }
+/* Describes what the agent *is* (a real model call vs a rule-based stub),
+   never how it performed - that's the platform's job to measure, not to
+   presuppose before a single scenario has run. */
+.kind-tag {
+  display: inline-block; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 650;
+  letter-spacing: 0.05em; padding: 0.1rem 0.4rem; border-radius: 4px;
+  background: rgba(76, 141, 255, 0.12); border: 1px solid rgba(76, 141, 255, 0.3); color: var(--accent);
+}
 
 .run-btn {
-  background: var(--accent); color: #06121c; border: 0; border-radius: var(--radius-sm);
-  padding: 0.55rem 1.05rem; font: inherit; font-weight: 600; font-size: 0.88rem; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: var(--accent); color: var(--accent-ink); border: 0; border-radius: var(--radius-sm);
+  padding: 0.55rem 1.1rem; font: inherit; font-weight: 600; font-size: 0.86rem; cursor: pointer;
   white-space: nowrap;
+  transition: filter 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
-.run-btn:hover:not(:disabled) { filter: brightness(1.1); }
-.run-btn:disabled { opacity: 0.55; cursor: default; }
+.run-btn svg { flex: none; }
+.run-btn:hover:not(:disabled) { filter: brightness(1.1); box-shadow: 0 4px 14px -4px rgba(76, 141, 255, 0.55); }
+.run-btn:active:not(:disabled) { transform: translateY(1px); }
+.run-btn:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+.run-btn.secondary {
+  background: var(--bg-inset); color: var(--text); border: 1px solid var(--border-strong);
+}
+.run-btn.secondary:hover:not(:disabled) { filter: none; border-color: var(--accent); box-shadow: none; background: var(--bg-raised); }
 
 /* --- progress --- */
-.progress { margin-top: 1.1rem; }
+.progress { margin-top: 1.15rem; }
 .progress-meta { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-dim); margin-bottom: 0.4rem; }
-.progress-track { height: 5px; background: var(--bg-inset); border-radius: 999px; overflow: hidden; }
+.progress-meta span:last-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.progress-track { height: 6px; background: var(--track); border-radius: 999px; overflow: hidden; }
 .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 240ms ease; }
 /* Without Supabase Realtime there are no per-scenario rows to count, so a
    percentage bar would sit at 0% for the whole run and read as "hung".
@@ -141,35 +213,42 @@ a.chip:hover { border-color: var(--border-strong); color: var(--text); }
 }
 
 /* --- headline score --- */
-.headline { display: flex; align-items: center; gap: 1.25rem; margin-top: 1.25rem; }
+.headline { display: flex; align-items: center; gap: 1.4rem; margin-top: 1.4rem; }
 .dial { flex: none; }
 .headline-body { min-width: 0; }
-.tier { font-size: 1.05rem; font-weight: 650; margin: 0; }
+.metric-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); font-weight: 600; }
+.tier { font-size: 1.1rem; font-weight: 700; margin: 0.15rem 0 0; letter-spacing: -0.005em; }
 .tier.pass { color: var(--pass); }
 .tier.warn { color: var(--warn); }
 .tier.fail { color: var(--fail); }
 
-.formula { margin: 0.35rem 0 0; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim); }
+.formula { margin: 0.4rem 0 0; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .formula b { color: var(--text); font-weight: 600; }
 
 /* --- metric row --- */
-.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-top: 1.1rem; }
-.metric { background: var(--bg-inset); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.6rem 0.7rem; }
-.metric-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
-.metric-value { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 600; margin-top: 0.1rem; }
-.metric-note { font-size: 0.68rem; color: var(--text-faint); }
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-top: 1.2rem; }
+.metric { background: var(--bg-inset); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.65rem 0.75rem; }
+.metric-value { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 650; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
+.metric-note { font-size: 0.68rem; color: var(--text-faint); margin-top: 0.15rem; }
 
 /* --- bars --- */
 .section-title {
-  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--text-faint); margin: 1.5rem 0 0.6rem;
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+  color: var(--text-faint); margin: 1.6rem 0 0.65rem;
+  padding-top: 1rem; border-top: 1px solid var(--border);
 }
-.bar-row { display: grid; grid-template-columns: 9.5rem 1fr 2.6rem; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; font-size: 0.83rem; }
+.section-count {
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-transform: none;
+  letter-spacing: 0; color: var(--text-faint); background: var(--bg-inset);
+  border: 1px solid var(--border); border-radius: 999px; padding: 0.05rem 0.45rem; font-size: 0.68rem;
+}
+.bar-row { display: grid; grid-template-columns: 11.5rem 1fr 2.6rem; align-items: center; gap: 0.6rem; margin-bottom: 0.45rem; font-size: 0.83rem; }
 .bar-label { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bar-track { height: 7px; background: var(--bg-inset); border-radius: 999px; overflow: hidden; }
+.bar-track { height: 7px; background: var(--track); border-radius: 999px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 999px; transition: width 300ms ease; }
-.bar-value { font-family: var(--font-mono); font-size: 0.8rem; text-align: right; color: var(--text-dim); }
-/* Alert violet rather than the score-scale grey: this is a call-out ("look
+.bar-value { font-family: var(--font-mono); font-size: 0.8rem; text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+/* Alert violet rather than the score-scale blue: this is a call-out ("look
    here"), not a restatement of a low number the bar next to it already
    shows. */
 .bar-row.weakest .bar-label { color: var(--alert); font-weight: 600; }
@@ -178,11 +257,21 @@ a.chip:hover { border-color: var(--border-strong); color: var(--text); }
 .scenarios { margin-top: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
 .scenario {
   display: grid; grid-template-columns: 1fr auto; gap: 0.15rem 0.75rem;
-  padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border);
+  padding: 0.65rem 0.8rem; border-bottom: 1px solid var(--border);
   font-size: 0.83rem; align-items: baseline;
+  transition: background-color 120ms ease;
 }
 .scenario:last-child { border-bottom: 0; }
-.scenario.pending { opacity: 0.5; }
+.scenario:hover { background: var(--bg-inset); }
+/* Pending rows (before a run reaches them) carry no information yet - the
+   scenario id is only useful once there's a result to cross-reference it
+   against, so drop it and tighten the row to one line. Nine of these
+   stacked is the first thing a visitor sees before ever clicking "Run
+   certification"; the full three-line id/message/tag treatment for
+   content nobody can act on yet was the loudest thing on an empty page. */
+.scenario.pending { opacity: 0.55; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.scenario.pending .scenario-id { display: none; }
+.scenario.pending .scenario-msg { margin-top: 0; }
 /* CertificationsPage rows are <a> tags (whole row is clickable, links to
    /verify/:id) rather than plain divs like the live scenario list - strip
    the default link styling so they read as list rows, not blue text. */
@@ -191,58 +280,60 @@ a.cert-row:hover { background: var(--bg-inset); }
 .scenario-id { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-faint); }
 .scenario-msg { color: var(--text); margin: 0.15rem 0 0; word-break: break-word; }
 .scenario-reply { color: var(--text-dim); margin: 0.2rem 0 0; font-size: 0.8rem; word-break: break-word; }
-.scenario-score { font-family: var(--font-mono); font-weight: 600; text-align: right; }
+.scenario-score { font-family: var(--font-mono); font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; }
 
 .lang-tag {
-  display: inline-block; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em;
-  padding: 0.05rem 0.4rem; border-radius: 4px; margin-right: 0.4rem;
+  display: inline-block; font-size: 0.66rem; font-weight: 650; letter-spacing: 0.04em;
+  padding: 0.08rem 0.42rem; border-radius: 4px; margin-right: 0.4rem;
   background: var(--bg-inset); border: 1px solid var(--border-strong); color: var(--text-dim);
+  font-family: var(--font-mono);
 }
 .flag {
-  display: inline-block; font-size: 0.68rem; padding: 0.05rem 0.4rem; border-radius: 4px;
+  display: inline-block; font-size: 0.68rem; font-weight: 500; padding: 0.05rem 0.4rem; border-radius: 4px;
   background: var(--alert-soft); color: var(--alert); border: 1px solid var(--alert-border);
   margin-left: 0.4rem; white-space: nowrap;
 }
 
-.judges { grid-column: 1 / -1; margin: 0.35rem 0 0; }
-.judges summary { cursor: pointer; color: var(--text-faint); font-size: 0.75rem; list-style: none; }
+.judges { grid-column: 1 / -1; margin: 0.4rem 0 0; }
+.judges summary { cursor: pointer; color: var(--text-faint); font-size: 0.75rem; list-style: none; user-select: none; }
+.judges summary:hover { color: var(--text-dim); }
 .judges summary::-webkit-details-marker { display: none; }
 .judges summary::before { content: "\25B8  "; }
 .judges[open] summary::before { content: "\25BE  "; }
-.judge { display: flex; gap: 0.6rem; padding: 0.35rem 0 0; font-size: 0.76rem; color: var(--text-dim); }
+.judge { display: flex; gap: 0.6rem; padding: 0.4rem 0 0; font-size: 0.76rem; color: var(--text-dim); }
 .judge-model { font-family: var(--font-mono); color: var(--text-faint); flex: none; width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.judge-score { font-family: var(--font-mono); flex: none; width: 2.2rem; text-align: right; }
+.judge-score { font-family: var(--font-mono); flex: none; width: 2.2rem; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* --- certificate --- */
-.cert { margin-top: 1.25rem; padding: 0.85rem; background: var(--bg-inset); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.cert { margin-top: 1.4rem; padding: 0.95rem 1rem; background: var(--bg-inset); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .cert-id { font-family: var(--font-mono); font-size: 0.75rem; word-break: break-all; color: var(--text-dim); }
-.cert a { color: var(--accent); }
+.cert a { color: var(--accent); font-weight: 500; }
 .cert-mock { color: var(--warn); font-size: 0.78rem; }
 
 .error {
-  margin-top: 1rem; padding: 0.7rem 0.85rem; border-radius: var(--radius-sm);
+  margin-top: 1rem; padding: 0.7rem 0.9rem; border-radius: var(--radius-sm);
   background: var(--alert-soft); border: 1px solid var(--alert-border);
   color: var(--alert); font-size: 0.84rem;
 }
 
-.footnote { margin-top: 2.5rem; color: var(--text-faint); font-size: 0.78rem; max-width: 74ch; }
+.footnote { margin-top: 2.75rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--text-faint); font-size: 0.78rem; max-width: 74ch; }
 .footnote code { font-family: var(--font-mono); color: var(--text-dim); }
 
 /* --- narrow screens --- */
 /* Judges will look at this on a laptop, but a phone-width fallback costs
    three rules and stops the bar charts collapsing to a sliver of track. */
 @media (max-width: 520px) {
-  .shell { padding: 1.25rem 0.85rem 3rem; }
-  .card { padding: 1rem; }
+  .shell { padding: 1.5rem 0.85rem 3rem; }
+  .card { padding: 1.1rem; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .bar-row { grid-template-columns: 1fr 2.6rem; gap: 0.2rem 0.6rem; }
   .bar-row .bar-track { grid-column: 1 / -1; }
-  .headline { gap: 0.9rem; }
-  /* The absolute-positioned locale switch has no room to float over a
-     3.2rem centered title at this width - drop it back into flow above the
+  .headline { gap: 1rem; }
+  /* The absolute-positioned locale switch has no room to float over the
+     centered title at this width - drop it back into flow above the
      title instead of overlapping it. */
-  .masthead { padding-top: 0.5rem; }
+  .masthead { padding-top: 0.25rem; }
   .locale-switch { position: static; margin-bottom: 0.75rem; }
-  .wordmark { font-size: 2.1rem; }
-  .tagline { font-size: 0.95rem; }
+  .wordmark { font-size: 1.4rem; }
+  .tagline { font-size: 0.88rem; }
 }
