@@ -75,6 +75,16 @@ export function VerifyPage({ testRunId }: { testRunId: string }) {
 
   const t = STRINGS[uiLanguage];
 
+  // Flat black for this page, not the dashboard's sky-blue gradient - the
+  // gradient lives on body (shared across all three routes), and .shell is
+  // a centered max-width column, so overriding it there wouldn't cover the
+  // full viewport width. Toggling directly on body is the one place that
+  // does, and only for as long as this page is mounted.
+  useEffect(() => {
+    document.body.classList.add("flat-bg");
+    return () => document.body.classList.remove("flat-bg");
+  }, []);
+
   useEffect(() => {
     if (!supabase) {
       setState({ kind: "not-configured" });
@@ -144,7 +154,9 @@ export function VerifyPage({ testRunId }: { testRunId: string }) {
       </header>
 
       <p style={{ marginBottom: "1rem" }}>
-        <a href="/">{t.verifyBack}</a>
+        <a href="/" className="run-btn secondary">
+          {t.verifyBack}
+        </a>
       </p>
 
       {state.kind === "loading" && <p>{t.verifyLoading}</p>}

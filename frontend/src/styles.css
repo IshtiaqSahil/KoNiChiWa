@@ -92,6 +92,10 @@ body {
 
 a { color: var(--accent); }
 
+/* VerifyPage.tsx toggles this while mounted - flat black instead of the
+   dashboard's sky-blue gradient. */
+body.flat-bg { background: var(--bg); }
+
 :focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
