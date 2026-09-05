@@ -1,4 +1,4 @@
--- KoNiChiWa off-chain persistence schema.
+-- Verity off-chain persistence schema.
 --
 -- Covers the decided part of the Sui pillar's "visible live, not just at
 -- the end" narrative (design/ULTIMATE_AI_AGENT_TRUST_PLATFORM_EN.md) using

@@ -1,4 +1,4 @@
-/* KoNiChiWa dashboard.
+/* Verity dashboard.
    One stylesheet, design tokens at the top - no CSS framework, since the
    whole UI is ~5 components and a build-time dependency would cost more to
    explain to teammates than it saves. */

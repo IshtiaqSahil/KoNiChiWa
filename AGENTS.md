@@ -1,4 +1,4 @@
-# KoNiChiWa — Team Brief for AI Agents
+# Verity — Team Brief for AI Agents
 
 Read this file first. It applies to every AI coding agent working in this
 repo (Claude Code, Cursor, Copilot, etc.), regardless of which team member

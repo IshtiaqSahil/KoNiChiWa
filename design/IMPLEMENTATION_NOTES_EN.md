@@ -37,7 +37,7 @@ where the line is between "built" and "still blocked." Pairs with
 Create your own free Supabase project:
 
 1. Create a project at supabase.com (or ask whoever owns the team's
-   Supabase account to make one for KoNiChiWa).
+   Supabase account to make one for Verity).
 2. In the SQL editor, run `backend/supabase/schema.sql` once. It's
    idempotent — safe to re-run if you're not sure it already ran.
 3. Grab four values from the project's API settings:

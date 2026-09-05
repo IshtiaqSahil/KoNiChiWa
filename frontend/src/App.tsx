@@ -181,7 +181,7 @@ export default function App() {
       <header className="masthead">
         <div>
           <h1 className="wordmark">
-            KoNiChiWa<span>.</span>
+            Verity<span>.</span>
           </h1>
           <p className="tagline">{t.tagline}</p>
         </div>

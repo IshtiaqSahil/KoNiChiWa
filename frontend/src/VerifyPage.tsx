@@ -136,7 +136,7 @@ export function VerifyPage({ testRunId }: { testRunId: string }) {
       <header className="masthead">
         <div>
           <h1 className="wordmark">
-            KoNiChiWa<span>.</span>
+            Verity<span>.</span>
           </h1>
           <p className="tagline">{t.verifyIntro}</p>
         </div>

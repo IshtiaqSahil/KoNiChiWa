@@ -63,7 +63,7 @@ export function CertificationsPage() {
       <header className="masthead">
         <div>
           <h1 className="wordmark">
-            KoNiChiWa<span>.</span>
+            Verity<span>.</span>
           </h1>
           <p className="tagline">{t.certificationsIntro}</p>
         </div>

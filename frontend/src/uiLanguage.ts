@@ -1,7 +1,7 @@
 import { Language } from "./api";
 import { UI_LANGUAGES } from "./i18n";
 
-export const LOCALE_KEY = "konichiwa.ui-language";
+export const LOCALE_KEY = "verity.ui-language";
 
 // Shared by App.tsx, VerifyPage.tsx, and CertificationsPage.tsx - each is
 // an independent entry point (see main.tsx's hand-rolled routing), so

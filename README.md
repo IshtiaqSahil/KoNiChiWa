@@ -1,6 +1,6 @@
-# KoNiChiWa — AI Agent Trust/Certification Platform
+# Verity — AI Agent Trust/Certification Platform
 
-KoNiChiWa tests candidate AI agents (payment/DeFi agents, in this demo) for
+Verity tests candidate AI agents (payment/DeFi agents, in this demo) for
 safety and reliability, then issues a certification that's independently
 verifiable — not just a number your server asserts. It was built for MUBA
 Hacks 2026 (Sui Track — AI × Sui) and the Gonka "AI for Society" challenge.

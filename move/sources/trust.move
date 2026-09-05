@@ -30,7 +30,7 @@
 // "run_<uuid>"). Both are just opaque identifier strings in this scope, so
 // both fields are `String` here instead - the original types would have
 // been unusable from the backend's actual data.
-module konichiwa::trust {
+module verity::trust {
     use std::string::String;
     use std::vector;
     use sui::object::{Self, UID};
