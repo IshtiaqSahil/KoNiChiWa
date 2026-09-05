@@ -112,6 +112,7 @@ a { color: var(--accent); }
 .wordmark {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   font-size: 1.7rem;
   font-weight: 700;
