@@ -77,10 +77,10 @@
 
 body {
   margin: 0;
-  /* 135deg = top-left -> bottom-right. Stop shifted early (0%/45% not
-     0%/100%) so the blue reads as a corner accent, not a wash over the
+  /* 180deg = top -> bottom. Black starts at 75% so the blue only occupies
+     the top quarter, reading as a header accent, not a wash over the
      whole page competing with content. */
-  background: linear-gradient(135deg, var(--bg-top) 0%, var(--bg) 45%);
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg) 75%);
   background-repeat: no-repeat;
   color: var(--text);
   font-family: var(--font);
