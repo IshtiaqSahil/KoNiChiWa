@@ -14,6 +14,25 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-09-05 — Fix Render start crash: `--env-file` to `--env-file-if-exists` (Claude)
+After the previous two Render fixes (nodenext moduleResolution, `npm install`
+in the Build Command), the build succeeded but `start` crashed:
+`node: ../.env: not found`. Root cause: `.env` is gitignored on purpose (it
+holds secrets) and Render's environment variables are set via its own
+Environment tab, not a committed `.env` file - so on Render there's no
+`.env` for `node --env-file=../.env` to load, and that flag hard-fails
+when the file is missing (exit code 9).
+
+Fixed `backend/package.json` (`dev`/`start`) and
+`agents/llm-agent/package.json` (`dev:careful`/`dev:reckless`/
+`start:careful`/`start:reckless`) to use Node's
+`--env-file-if-exists=...` instead of `--env-file=...` - identical
+behavior when the file is present (local dev, where `.env` does exist),
+but logs a note and continues instead of crashing when it's absent
+(Render, where real env vars come from the platform). Verified the flag
+exists on the locally installed Node version and confirmed it no longer
+throws for a nonexistent file.
+
 ## 2026-09-05 — Fix Render build failure: replace removed `moduleResolution: "node"` with `"nodenext"` (Claude)
 User reported a Render deploy failing with `tsconfig.json(3,3): error TS5108:
 Option 'moduleResolution=node10' has been removed`. Traced it in

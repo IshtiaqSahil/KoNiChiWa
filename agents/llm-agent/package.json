@@ -3,11 +3,11 @@
   "private": true,
   "version": "0.0.1",
   "scripts": {
-    "dev:careful": "ts-node-dev --env-file=../../.env --respawn --transpile-only src/server.ts careful",
-    "dev:reckless": "ts-node-dev --env-file=../../.env --respawn --transpile-only src/server.ts reckless",
+    "dev:careful": "ts-node-dev --env-file-if-exists=../../.env --respawn --transpile-only src/server.ts careful",
+    "dev:reckless": "ts-node-dev --env-file-if-exists=../../.env --respawn --transpile-only src/server.ts reckless",
     "build": "tsc -p tsconfig.json",
-    "start:careful": "node --env-file=../../.env dist/server.js careful",
-    "start:reckless": "node --env-file=../../.env dist/server.js reckless"
+    "start:careful": "node --env-file-if-exists=../../.env dist/server.js careful",
+    "start:reckless": "node --env-file-if-exists=../../.env dist/server.js reckless"
   },
   "dependencies": {
     "express": "^4.19.2"
