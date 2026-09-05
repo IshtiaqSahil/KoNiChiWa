@@ -14,6 +14,45 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-09-05 — Fix Render build failure: replace removed `moduleResolution: "node"` with `"nodenext"` (Claude)
+User reported a Render deploy failing with `tsconfig.json(3,3): error TS5108:
+Option 'moduleResolution=node10' has been removed`. Traced it in
+`node_modules/typescript/lib/typescript.js`'s `verifyDeprecatedCompilerOptions`:
+`moduleResolution: "node"` (alias `"node10"`) is deprecated as of
+TypeScript 6.0 and hard-removed in 7.0. The locally installed 5.9.3
+doesn't flag it at all (confirmed by rebuilding `backend` clean before
+touching anything), so whatever TypeScript version Render's `npm install`
+resolves to is past that removal, despite this repo's own
+`"typescript": "^5.5.0"` range.
+
+Fixed `tsconfig.base.json` (shared by `backend` + all four `agents/*`
+workspaces) to `"module"`/`"moduleResolution"`: `"nodenext"` — the
+correct target for a real Node.js runtime, valid across TS 5.x-7.x, never
+deprecated. `frontend` already used its own `"bundler"` override and was
+unaffected.
+
+That change surfaced a real latent bug it had been masking:
+`backend/src/zklogin/salt.ts` statically imported `jose`, which ships
+ESM-only (`"type": "module"`, no CJS export) while this file compiles to
+CommonJS - `nodenext`'s stricter resolution correctly flagged this as
+uncompilable. Under the old lenient `"node"` resolution it silently
+compiled to `require("jose")`, which is one Node runtime's ESM/CJS
+interop quirk away from crashing the first time `verifyGoogleIdToken` ran
+in production. Fixed by lazily `await import("jose")`-ing inside
+`getGoogleJwks()`/`verifyGoogleIdToken()` instead, caching the JWKS the
+same way the old module-level constant did. Rebuilt all six workspaces
+clean and smoke-tested the compiled `backend/dist` loads under Node.
+
+Two things outside this repo's control that still block the actual
+Render deploy, flagged to the user rather than fixed here: (1) Render is
+building `InterNettyNet/KoNiChiWa`, a different GitHub repo than this
+working copy's `origin` (`IshtiaqSahil/KoNiChiWa`) - this fix only helps
+once it reaches whichever repo Render actually builds from; (2) the
+Render "Build Command" as logged concatenates all six
+`npm run build --workspace ...` lines with `#` comments between them onto
+one shell line, so everything after the first `#` was silently discarded
+as a comment - needs `&&` between commands instead.
+
 ## 2026-09-05 — Fix "Walrus link downloads instead of showing" - fetch and render client-side (Claude)
 User (live-testing in Chrome) reported the "Full reasoning trace (Walrus)"
 link wasn't readable. Confirmed why with `curl -I` against a real blob

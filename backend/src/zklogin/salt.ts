@@ -1,5 +1,5 @@
 import { createHmac } from "crypto";
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import type { createRemoteJWKSet as CreateRemoteJWKSet } from "jose";
 
 // zkLogin identity for MUBA Hacks Track 02 ("Use Sui for ownership,
 // identity, payments or on-chain execution"). Derives a real Sui address
@@ -23,7 +23,18 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const SALT_SECRET = process.env.ZKLOGIN_SALT_SECRET;
 
-const googleJwks = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
+// jose ships ESM-only; this file compiles to CommonJS, so it's loaded via
+// dynamic import() rather than a static import, and the resulting JWKSet is
+// cached so it's only created once (same lifetime as the old module-level const).
+let googleJwks: ReturnType<typeof CreateRemoteJWKSet> | undefined;
+
+async function getGoogleJwks() {
+  if (!googleJwks) {
+    const { createRemoteJWKSet } = await import("jose");
+    googleJwks = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
+  }
+  return googleJwks;
+}
 
 export interface VerifiedIdentity {
   sub: string;
@@ -36,7 +47,9 @@ export async function verifyGoogleIdToken(idToken: string): Promise<VerifiedIden
     throw new Error("GOOGLE_OAUTH_CLIENT_ID not configured");
   }
 
-  const { payload } = await jwtVerify(idToken, googleJwks, {
+  const { jwtVerify } = await import("jose");
+  const jwks = await getGoogleJwks();
+  const { payload } = await jwtVerify(idToken, jwks, {
     issuer: ["accounts.google.com", "https://accounts.google.com"],
     audience: GOOGLE_CLIENT_ID,
   });
