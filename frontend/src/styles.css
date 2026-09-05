@@ -4,9 +4,11 @@
    explain to teammates than it saves. */
 
 :root {
-  /* Flat black, no gradient - every surface is a step of grey-black, no
-     colour tint mixed into the ground. Depth comes from border + shadow,
-     not from lightening the background. */
+  /* Page ground is a top-to-bottom gradient (--bg-top -> --bg, see body
+     below); every raised/inset surface stays flat grey-black with no
+     colour tint - depth for cards/panels still comes from border +
+     shadow, not from lightening. */
+  --bg-top: #0a1a30;
   --bg: #050506;
   --bg-raised: #101012;
   --bg-inset: #0a0a0b;
@@ -75,7 +77,8 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: linear-gradient(to bottom, var(--bg-top), var(--bg));
+  background-repeat: no-repeat;
   color: var(--text);
   font-family: var(--font);
   font-size: 15px;
