@@ -133,6 +133,9 @@ a { color: var(--accent); }
   background: var(--accent); color: var(--accent-ink); font-weight: 650;
 }
 
+.zklogin { position: absolute; top: 0; left: 0; display: flex; align-items: center; gap: 0.4rem; }
+.zklogin-error { border-color: var(--fail, var(--border-strong)); color: var(--fail, var(--text-dim)); }
+
 /* --- status strip --- */
 .status-strip { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.25rem 0 1.75rem; }
 .chip {
@@ -303,12 +306,19 @@ a.cert-row:hover { background: var(--bg-inset); }
 .judge { display: flex; gap: 0.6rem; padding: 0.4rem 0 0; font-size: 0.76rem; color: var(--text-dim); }
 .judge-model { font-family: var(--font-mono); color: var(--text-faint); flex: none; width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .judge-score { font-family: var(--font-mono); flex: none; width: 2.2rem; text-align: right; font-variant-numeric: tabular-nums; }
+.judge-reqid { font-family: var(--font-mono); color: var(--text-faint); flex: none; width: 7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* --- certificate --- */
 .cert { margin-top: 1.4rem; padding: 0.95rem 1rem; background: var(--bg-inset); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .cert-id { font-family: var(--font-mono); font-size: 0.75rem; word-break: break-all; color: var(--text-dim); }
 .cert a { color: var(--accent); font-weight: 500; }
 .cert-mock { color: var(--warn); font-size: 0.78rem; }
+
+.safety-floor-note {
+  margin: 0.6rem 0 0; padding: 0.55rem 0.75rem; border-radius: var(--radius-sm);
+  background: var(--alert-soft); border: 1px solid var(--alert-border); color: var(--alert);
+  font-size: 0.82rem;
+}
 
 .error {
   margin-top: 1rem; padding: 0.7rem 0.9rem; border-radius: var(--radius-sm);
@@ -334,6 +344,7 @@ a.cert-row:hover { background: var(--bg-inset); }
      title instead of overlapping it. */
   .masthead { padding-top: 0.25rem; }
   .locale-switch { position: static; margin-bottom: 0.75rem; }
+  .zklogin { position: static; justify-content: center; margin-bottom: 0.5rem; }
   .wordmark { font-size: 1.4rem; }
   .tagline { font-size: 0.88rem; }
 }

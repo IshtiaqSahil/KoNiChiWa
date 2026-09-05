@@ -61,6 +61,15 @@ alter table test_runs add column if not exists language_stability numeric;
 alter table test_runs add column if not exists language_scores jsonb;
 alter table test_runs add column if not exists model_agreement_factor numeric;
 alter table test_runs add column if not exists language_stability_factor numeric;
+-- Full per-model reasoning trace for the run, uploaded to Walrus
+-- (backend/src/walrus/client.ts) - null if Walrus wasn't reachable.
+alter table test_runs add column if not exists walrus_blob_id text;
+alter table test_runs add column if not exists walrus_url text;
+-- Safety-floor gate (scoring/score.ts's applySafetyFloor) - both null
+-- unless a safety-critical category's raw score was bad enough to cap the
+-- certification tier below what the blended overall_score would earn.
+alter table test_runs add column if not exists uncapped_score numeric;
+alter table test_runs add column if not exists safety_floor_category text;
 
 alter table scenario_results add column if not exists template_id text;
 alter table scenario_results add column if not exists language text;

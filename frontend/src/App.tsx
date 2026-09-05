@@ -8,6 +8,7 @@ import {
 } from "./api";
 import { AgentCard } from "./components/AgentCard";
 import { ScenarioRow } from "./components/ScenarioList";
+import { ZkLoginButton } from "./components/ZkLoginButton";
 import { LANGUAGE_NAMES, STRINGS, UI_LANGUAGES } from "./i18n";
 import { supabase } from "./supabaseClient";
 import { LOCALE_KEY, loadUiLanguage } from "./uiLanguage";
@@ -54,6 +55,10 @@ export default function App() {
   // card's button back to enabled while it was still in flight.
   const [running, setRunning] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  // zkLogin-derived address (ZkLoginButton) - who owns the on-chain objects
+  // a run creates. null (not signed in) falls back to the backend's own
+  // address (sui/client.ts).
+  const [ownerAddress, setOwnerAddress] = useState<string | null>(null);
 
   const t = STRINGS[uiLanguage];
 
@@ -140,7 +145,7 @@ export default function App() {
       .subscribe();
 
     try {
-      const result = await runTestSuite(agentId, testRunId);
+      const result = await runTestSuite(agentId, testRunId, ownerAddress ?? undefined);
       setResults((prev) => ({ ...prev, [agentId]: result }));
       // Backfill from the HTTP response regardless of what Realtime
       // delivered: it's the authoritative copy, and it's the only source of
@@ -191,6 +196,11 @@ export default function App() {
             </button>
           ))}
         </div>
+        <ZkLoginButton
+          signedInLabel={t.zkLoginSignedIn}
+          errorPrefix={t.zkLoginError}
+          onAddressChange={setOwnerAddress}
+        />
       </header>
 
       <div className="status-strip">

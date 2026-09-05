@@ -7,6 +7,7 @@ import { loadUiLanguage } from "./uiLanguage";
 import { ScoreDial } from "./components/ScoreDial";
 import { ScoreBars, BarItem } from "./components/ScoreBars";
 import { ScenarioList, ScenarioRow } from "./components/ScenarioList";
+import { ReasoningTraceViewer } from "./components/ReasoningTraceViewer";
 
 // Standalone, shareable read-only view of one completed test run - the
 // "public verification page" from the original pitch doc
@@ -40,6 +41,10 @@ interface TestRunRow {
   category_scores: Record<string, number> | null;
   language_scores: Record<string, number> | null;
   sui_object_id: string | null;
+  walrus_blob_id: string | null;
+  walrus_url: string | null;
+  uncapped_score: number | null;
+  safety_floor_category: string | null;
   error: string | null;
   completed_at: string | null;
 }
@@ -228,10 +233,16 @@ function VerifiedResult({
                 written - older rows have them as null. Show "—" instead of
                 a blank gap ("11 ×  × = 13") for those. */}
             <b>{run.base_score ?? "—"}</b> × <b>{run.model_agreement_factor ?? "—"}</b> ×{" "}
-            <b>{run.language_stability_factor ?? "—"}</b> = <b>{overallScore}</b>
+            <b>{run.language_stability_factor ?? "—"}</b> = <b>{run.uncapped_score ?? overallScore}</b>
           </p>
         </div>
       </div>
+
+      {run.safety_floor_category && (
+        <p className="safety-floor-note">
+          {t.safetyFloorNote(categoryLabel(t, run.safety_floor_category), overallScore)}
+        </p>
+      )}
 
       <div className="metrics">
         <div className="metric">
@@ -265,7 +276,12 @@ function VerifiedResult({
       {rows.length > 0 && (
         <>
           <h3 className="section-title">{t.scenarios}</h3>
-          <ScenarioList rows={rows} wrongLanguageLabel={t.wrongLanguage} judgesLabel={t.judgesToggle} />
+          <ScenarioList
+            rows={rows}
+            wrongLanguageLabel={t.wrongLanguage}
+            judgesLabel={t.judgesToggle}
+            requestIdLabel={t.requestIdLabel}
+          />
         </>
       )}
 
@@ -290,6 +306,17 @@ function VerifiedResult({
           <p className="cert-id" style={{ margin: 0 }}>
             {t.certifiedAt}: {run.completed_at ? new Date(run.completed_at).toLocaleString() : "—"}
           </p>
+          {run.walrus_url && (
+            <ReasoningTraceViewer
+              aggregatorUrl={run.walrus_url}
+              viewLabel={t.walrusTrace}
+              loadingLabel={t.walrusTraceLoading}
+              errorLabel={t.walrusTraceError}
+              wrongLanguageLabel={t.wrongLanguage}
+              judgesLabel={t.judgesToggle}
+              requestIdLabel={t.requestIdLabel}
+            />
+          )}
         </div>
       )}
     </section>

@@ -68,7 +68,8 @@ function stubJudge(
   response: AgentInvokeResponse,
   expected: ExpectedOutcome,
   language: Language,
-  jitterSeed: number
+  jitterSeed: number,
+  scenarioId: string
 ): ModelJudgment {
   const correct = actionMatches(response, expected);
   const inLanguage = repliedInLanguage(response.reply, language);
@@ -88,6 +89,7 @@ function stubJudge(
     model,
     score,
     reasoning: `[STUB] Agent ${actionNote}${languageNote}.`,
+    request_id: `stub-${scenarioId}-${jitterSeed}`,
   };
 }
 
@@ -124,7 +126,7 @@ function stripThinkingBlock(content: string): string {
   return openIdx === -1 ? closed : closed.slice(0, openIdx);
 }
 
-function parseJudgeResponse(model: string, content: string): ModelJudgment {
+function parseJudgeResponse(model: string, content: string, requestId: string): ModelJudgment {
   const cleaned = stripThinkingBlock(content);
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error(`No JSON found in ${model} response: ${content.slice(0, 200)}`);
@@ -139,6 +141,7 @@ function parseJudgeResponse(model: string, content: string): ModelJudgment {
     model,
     score,
     reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : "(no reasoning given)",
+    request_id: requestId,
   };
 }
 
@@ -175,7 +178,16 @@ async function callGonkaModel(
     throw new Error(`Unexpected GonkaRouter response shape for ${model}: ${JSON.stringify(body).slice(0, 200)}`);
   }
 
-  return parseJudgeResponse(model, content);
+  // OpenAI-compatible completion responses carry an `id` field
+  // (e.g. "chatcmpl-xxxx") identifying that specific inference call -
+  // this is the "Gonka Request ID" the challenge brief asks the transparency
+  // UI to display as proof a result came from the decentralized network and
+  // not a centralized server. Fall back to a labeled placeholder if
+  // GonkaRouter ever omits it, rather than silently passing through
+  // `undefined`.
+  const requestId = typeof body?.id === "string" ? body.id : "unavailable";
+
+  return parseJudgeResponse(model, content, requestId);
 }
 
 async function judgeWithFallback(
@@ -185,14 +197,27 @@ async function judgeWithFallback(
   jitterSeed: number
 ): Promise<ModelJudgment> {
   if (!GONKA_CONFIGURED) {
-    return stubJudge(model, response, scenario.expected, scenario.language, jitterSeed);
+    return stubJudge(model, response, scenario.expected, scenario.language, jitterSeed, scenario.id);
   }
 
   try {
     return await callGonkaModel(model, scenario, response);
   } catch (err) {
-    console.error(`[gonka] ${model} call failed, falling back to stub judge:`, err);
-    return stubJudge(model, response, scenario.expected, scenario.language, jitterSeed);
+    // Live-tested 2026-09-04: a failure here is often transient GonkaRouter
+    // routing/load flakiness (the same request succeeding a moment later
+    // with no code change), not a broken model id - a Kimi-K2.6 call that
+    // errored "model not available for your channel" on one attempt
+    // returned normally on the next, seconds apart. One retry, mirroring
+    // sui/client.ts's withRetry, catches most of that instead of spending a
+    // real GonkaRouter model's judgment on the stub every time the network
+    // hiccups.
+    console.error(`[gonka] ${model} call failed, retrying once:`, err instanceof Error ? err.message : err);
+    try {
+      return await callGonkaModel(model, scenario, response);
+    } catch (retryErr) {
+      console.error(`[gonka] ${model} retry also failed, falling back to stub judge:`, retryErr);
+      return stubJudge(model, response, scenario.expected, scenario.language, jitterSeed, scenario.id);
+    }
   }
 }
 

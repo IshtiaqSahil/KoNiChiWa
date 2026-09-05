@@ -1,5 +1,13 @@
-// Skeleton - not yet published (needs the Sui CLI to run `sui client
-// publish`; see design/IMPLEMENTATION_NOTES_EN.md "Testnet Sui setup").
+// Published to testnet - SUI_PACKAGE_ID in .env is a real, immutable
+// on-chain package. That means every struct/entry-function signature below
+// is now load-bearing: changing a field type or a `public entry fun`
+// parameter list does NOT take effect until someone runs `sui client
+// publish` again and updates SUI_PACKAGE_ID to the new id - the backend
+// would otherwise be encoding calls against an ABI the deployed bytecode
+// doesn't have. (Caught live 2026-09-04: an edit here to make
+// gonka_request_id a vector broke calls against the already-published
+// package; reverted to keep the single-String shape the deployed package
+// actually has.) See design/IMPLEMENTATION_NOTES_EN.md "Testnet Sui setup".
 // Struct fields mirror design/prithvi_idea.txt and
 // design/ULTIMATE_AI_AGENT_TRUST_PLATFORM_EN.md's schema sketch.
 //
@@ -37,6 +45,13 @@ module konichiwa::trust {
         test_type: String,
         score: u8,
         timestamp: u64,
+        // GonkaRouter's per-model request ids (one per entry in
+        // models_used), joined with " | " - the deployed package's ABI
+        // fixes this as a single String (see module doc above), so a real
+        // vector<String> field isn't available without a republish.
+        // "stub-..." segments mean that judgment fell back to the local
+        // heuristic judge (see backend/src/gonka/router.ts) instead of a
+        // real GonkaRouter call.
         gonka_request_id: String,
         models_used: vector<String>,
         model_agreement: u8,

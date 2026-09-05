@@ -100,15 +100,30 @@ function enqueueSuiWrite<T>(fn: () => Promise<T>): Promise<T> {
   return result;
 }
 
+// Sui addresses are 32 bytes, 0x-prefixed hex (64 hex chars) - matches
+// normalizeSuiAddress's output shape (@mysten/sui/utils), including the
+// zkLogin-derived addresses computeZkLoginAddressFromSeed produces
+// (zklogin/salt.ts's counterpart on the frontend). Checked before ever
+// using a caller-supplied address as an on-chain object owner.
+const SUI_ADDRESS_RE = /^0x[0-9a-fA-F]{64}$/;
+
 async function signAndExecuteMoveCall(
   functionName: string,
-  buildArgs: (tx: Transaction, recipient: string) => unknown[]
+  buildArgs: (tx: Transaction, recipient: string) => unknown[],
+  // Overrides who *owns* the resulting object - the backend's own keypair
+  // still signs and pays gas either way (it's the only key configured,
+  // see loadPublisherKeypair above). A zkLogin-derived address (see
+  // zklogin/salt.ts) lets a real user own their own certification instead
+  // of everything defaulting to the backend's address. Invalid/missing
+  // values fall back to that default rather than failing the write.
+  ownerOverride?: string
 ): Promise<string | null> {
   const packageId = process.env.SUI_PACKAGE_ID;
   const keypair = loadPublisherKeypair();
   if (!packageId || !keypair) return null;
 
-  const recipient = keypair.getPublicKey().toSuiAddress();
+  const senderAddress = keypair.getPublicKey().toSuiAddress();
+  const recipient = ownerOverride && SUI_ADDRESS_RE.test(ownerOverride) ? ownerOverride : senderAddress;
 
   // The gRPC client's automatic gas/coin resolution during tx.build() is
   // unimplemented in the installed SDK (@mysten/sui/dist/.../grpc/core.js
@@ -119,19 +134,22 @@ async function signAndExecuteMoveCall(
   // relying on the auto-resolve the old JSON-RPC client provided for free.
   const [gasPriceResult, coinsResult] = await Promise.all([
     suiClient.core.getReferenceGasPrice(),
-    suiClient.core.getCoins({ address: recipient, coinType: "0x2::sui::SUI", limit: 1 }),
+    suiClient.core.getCoins({ address: senderAddress, coinType: "0x2::sui::SUI", limit: 1 }),
   ]);
   const gasCoin = coinsResult.objects[0];
   if (!gasCoin) {
-    throw new Error(`No SUI coins found for ${recipient} - fund it via \`sui client faucet\` first`);
+    throw new Error(`No SUI coins found for ${senderAddress} - fund it via \`sui client faucet\` first`);
   }
 
   const tx = new Transaction();
   // Required with the gRPC path - the old JSON-RPC suiClient.signAndExecuteTransaction
   // inferred the sender from its `signer` param; keypair.signAndExecuteTransaction
   // doesn't, so it must be set explicitly or the build fails with
-  // "Missing transaction sender" (caught live 2026-08-28).
-  tx.setSender(recipient);
+  // "Missing transaction sender" (caught live 2026-08-28). Always the
+  // backend's own key - it's the only one that can actually sign - even
+  // when `recipient` (the object's owner) has been overridden to someone
+  // else's zkLogin address.
+  tx.setSender(senderAddress);
   tx.setGasPayment([{ objectId: gasCoin.id, version: gasCoin.version, digest: gasCoin.digest }]);
   tx.setGasPrice(BigInt(gasPriceResult.referenceGasPrice));
   tx.setGasBudget(100_000_000); // matches the CLI publish gas budget
@@ -195,25 +213,30 @@ async function signAndExecuteMoveCall(
 export async function writeCertification(
   agentId: string,
   testRunId: string,
-  score: TrustScore
+  score: TrustScore,
+  ownerAddress?: string
 ): Promise<CertificationRecord> {
   const certified_at = new Date().toISOString();
 
   try {
     const objectId = await enqueueSuiWrite(() =>
-      signAndExecuteMoveCall("issue_certification", (tx, recipient) => [
-        tx.pure.string(agentId),
-        tx.pure.u8(score.overall_score),
-        tx.pure.string(score.certification_tier),
-        tx.pure.u64(Date.now()),
-        tx.pure.u64(0), // expires_at - no expiry/retest model yet (Won't-Have)
-        // multilingual_stability: real value now that scenarios run in
-        // en/zh/ja (scoring/score.ts calculateLanguageStability). Already
-        // u8-safe: the score is clamped to 0-100 and rounded before it
-        // gets here.
-        tx.pure.u8(score.language_stability),
-        tx.pure.address(recipient),
-      ])
+      signAndExecuteMoveCall(
+        "issue_certification",
+        (tx, recipient) => [
+          tx.pure.string(agentId),
+          tx.pure.u8(score.overall_score),
+          tx.pure.string(score.certification_tier),
+          tx.pure.u64(Date.now()),
+          tx.pure.u64(0), // expires_at - no expiry/retest model yet (Won't-Have)
+          // multilingual_stability: real value now that scenarios run in
+          // en/zh/ja (scoring/score.ts calculateLanguageStability). Already
+          // u8-safe: the score is clamped to 0-100 and rounded before it
+          // gets here.
+          tx.pure.u8(score.language_stability),
+          tx.pure.address(recipient),
+        ],
+        ownerAddress
+      )
     );
 
     if (objectId) {
@@ -265,30 +288,36 @@ export async function writeTestResult(
   agentId: string,
   testRunId: string,
   scenario: Scenario,
-  evaluation: GonkaEvaluation
+  evaluation: GonkaEvaluation,
+  ownerAddress?: string
 ): Promise<string> {
   if (!SUI_PER_SCENARIO_WRITES) return `0xMOCK_${scenario.id}`;
 
   try {
     const objectId = await enqueueSuiWrite(() =>
-      signAndExecuteMoveCall("record_test_result", (tx, recipient) => [
-        tx.pure.string(agentId),
-        tx.pure.string(testRunId),
-        tx.pure.string(scenario.category),
-        // score is 0-100 already (GonkaEvaluation.base_score), clamp+round
-        // for the u8 field the same way writeCertification does.
-        tx.pure.u8(Math.max(0, Math.min(100, Math.round(evaluation.base_score)))),
-        // gonka_request_id: no real per-call request id surfaced by
-        // GonkaRouter's response shape (backend/src/gonka/router.ts) -
-        // scenario_id is the closest stable identifier for "which judged
-        // call this was" and lets a viewer correlate this object back to
-        // the scenario_results row.
-        tx.pure.string(scenario.id),
-        tx.pure.vector("string", evaluation.judgments.map((j) => j.model)),
-        tx.pure.u8(Math.max(0, Math.min(100, Math.round(evaluation.model_agreement)))),
-        tx.pure.u64(Date.now()),
-        tx.pure.address(recipient),
-      ])
+      signAndExecuteMoveCall(
+        "record_test_result",
+        (tx, recipient) => [
+          tx.pure.string(agentId),
+          tx.pure.string(testRunId),
+          tx.pure.string(scenario.category),
+          // score is 0-100 already (GonkaEvaluation.base_score), clamp+round
+          // for the u8 field the same way writeCertification does.
+          tx.pure.u8(Math.max(0, Math.min(100, Math.round(evaluation.base_score)))),
+          // GonkaRouter's completion `id` field per judgment, captured in
+          // gonka/router.ts ("stub-..." when a judgment fell back to the
+          // local heuristic instead of a real call). The deployed package's
+          // gonka_request_id field is a single String (see move/sources/
+          // trust.move module doc - it's already published, so the ABI is
+          // fixed), so multiple ids are joined rather than passed as a vector.
+          tx.pure.string(evaluation.judgments.map((j) => j.request_id).join(" | ")),
+          tx.pure.vector("string", evaluation.judgments.map((j) => j.model)),
+          tx.pure.u8(Math.max(0, Math.min(100, Math.round(evaluation.model_agreement)))),
+          tx.pure.u64(Date.now()),
+          tx.pure.address(recipient),
+        ],
+        ownerAddress
+      )
     );
 
     if (objectId) return objectId;

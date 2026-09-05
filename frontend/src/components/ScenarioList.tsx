@@ -20,9 +20,10 @@ interface Props {
   rows: ScenarioRow[];
   wrongLanguageLabel: string;
   judgesLabel: (n: number) => string;
+  requestIdLabel: string;
 }
 
-export function ScenarioList({ rows, wrongLanguageLabel, judgesLabel }: Props) {
+export function ScenarioList({ rows, wrongLanguageLabel, judgesLabel, requestIdLabel }: Props) {
   return (
     <div className="scenarios">
       {rows.map((row) => {
@@ -68,6 +69,12 @@ export function ScenarioList({ rows, wrongLanguageLabel, judgesLabel }: Props) {
                       style={{ color: scoreColor(judgment.score) }}
                     >
                       {Math.round(judgment.score)}
+                    </span>
+                    <span
+                      className="judge-reqid"
+                      title={`${requestIdLabel}: ${judgment.request_id}`}
+                    >
+                      {judgment.request_id}
                     </span>
                     <span>{judgment.reasoning}</span>
                   </div>

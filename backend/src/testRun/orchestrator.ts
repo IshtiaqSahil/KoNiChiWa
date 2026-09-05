@@ -5,6 +5,7 @@ import { buildScenarios } from "../scenarios/scenarios";
 import { calculateTrustScore, TrustScore } from "../scoring/score";
 import { CategoryResult } from "../scoring/score";
 import { writeCertification, writeTestResult, CertificationRecord } from "../sui/client";
+import { uploadReasoningTrace, ReasoningTraceUpload } from "../walrus/client";
 import { startTestRun, recordScenarioResult, completeTestRun, failTestRun } from "../db/persistence";
 
 export interface ScenarioRunResult {
@@ -27,6 +28,9 @@ export interface TestRunResult {
   scenario_results: ScenarioRunResult[];
   score: TrustScore;
   certification: CertificationRecord;
+  // null if Walrus wasn't reachable - see walrus/client.ts, same
+  // degrade-gracefully contract as the Sui/Gonka fallbacks.
+  reasoning_trace: ReasoningTraceUpload | null;
 }
 
 // Running the same suite in three languages tripled the scenario count, and
@@ -65,7 +69,12 @@ async function mapWithConcurrency<T, R>(
 export async function runTestSuite(
   agentId: string,
   endpoint: AgentEndpointConfig,
-  requestedTestRunId?: string
+  requestedTestRunId?: string,
+  // zkLogin-derived address (backend/src/zklogin/salt.ts +
+  // frontend/src/zklogin.ts) - who owns the on-chain objects this run
+  // creates. Undefined/invalid falls back to the backend's own address
+  // (sui/client.ts's signAndExecuteMoveCall), same as before this existed.
+  ownerAddress?: string
 ): Promise<TestRunResult> {
   // Accepts a caller-supplied id so the frontend can subscribe to Supabase
   // Realtime for this run *before* kicking it off (see frontend/src/App.tsx)
@@ -98,7 +107,7 @@ export async function runTestSuite(
       // top of what the queue already handles - it just means this
       // scenario's worker doesn't return until its turn in that queue is
       // done.
-      const suiObjectId = await writeTestResult(agentId, testRunId, scenario, gonkaEval);
+      const suiObjectId = await writeTestResult(agentId, testRunId, scenario, gonkaEval, ownerAddress);
 
       // Fire-and-forget: this is what makes progress visible on the
       // dashboard scenario-by-scenario instead of only once the whole run
@@ -138,8 +147,26 @@ export async function runTestSuite(
   }));
 
   const score = calculateTrustScore(categoryResults);
-  const certification = await writeCertification(agentId, testRunId, score);
-  await completeTestRun(testRunId, score, certification);
+  // Independent of the Sui write - one is "the score is tamper-proof",
+  // the other is "the full reasoning behind it is independently fetchable,
+  // not just asserted by our server". Run together rather than sequentially
+  // since neither depends on the other's result.
+  const [certification, reasoningTrace] = await Promise.all([
+    writeCertification(agentId, testRunId, score, ownerAddress),
+    uploadReasoningTrace(
+      testRunId,
+      agentId,
+      scenarioResults.map((r) => ({
+        scenario_id: r.scenario_id,
+        category: r.category,
+        language: r.language,
+        message: r.message,
+        reply: r.reply,
+        judgments: r.judgments,
+      }))
+    ),
+  ]);
+  await completeTestRun(testRunId, score, certification, reasoningTrace);
 
   return {
     test_run_id: testRunId,
@@ -147,5 +174,6 @@ export async function runTestSuite(
     scenario_results: scenarioResults,
     score,
     certification,
+    reasoning_trace: reasoningTrace,
   };
 }

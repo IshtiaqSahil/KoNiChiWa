@@ -3,6 +3,12 @@
   "compilerOptions": {
     "module": "ESNext",
     "target": "ES2020",
+    // Base config's "node" resolver predates package.json "exports" maps
+    // and can't see subpaths like @mysten/sui/zklogin - Vite's own resolver
+    // (esbuild) already handles this correctly at dev/build time regardless,
+    // so this only affects `tsc -b`'s type-checking pass. "bundler" is the
+    // resolver TypeScript recommends pairing with Vite/ESNext output.
+    "moduleResolution": "bundler",
     "lib": ["ES2020", "DOM"],
     "jsx": "react-jsx",
     "rootDir": "src",

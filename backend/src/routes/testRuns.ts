@@ -71,9 +71,14 @@ router.post("/test-runs/:agentId", async (req, res) => {
 
   const requestedTestRunId =
     typeof req.body?.test_run_id === "string" ? req.body.test_run_id : undefined;
+  // Validated again in sui/client.ts before ever being used as an object
+  // owner - accepting a loosely-typed string here and letting that be the
+  // single source of truth for the format check, rather than duplicating
+  // the regex in two places.
+  const ownerAddress = typeof req.body?.owner_address === "string" ? req.body.owner_address : undefined;
 
   try {
-    const result = await runTestSuite(agentId, endpoint, requestedTestRunId);
+    const result = await runTestSuite(agentId, endpoint, requestedTestRunId, ownerAddress);
     res.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

@@ -3,6 +3,7 @@ import { TrustScore } from "../scoring/score";
 import { GonkaEvaluation } from "../gonka/types";
 import { Scenario } from "../scenarios/types";
 import { CertificationRecord } from "../sui/client";
+import { ReasoningTraceUpload } from "../walrus/client";
 
 // Every function here is a best-effort side channel: it feeds the live
 // dashboard (Supabase Realtime, per design/TECH_STACK_EN.md "Corrections"
@@ -56,7 +57,8 @@ export async function recordScenarioResult(
 export async function completeTestRun(
   testRunId: string,
   score: TrustScore,
-  certification: CertificationRecord
+  certification: CertificationRecord,
+  reasoningTrace: ReasoningTraceUpload | null
 ): Promise<void> {
   if (!supabase) return;
 
@@ -74,6 +76,10 @@ export async function completeTestRun(
       category_scores: score.category_scores,
       language_scores: score.language_scores,
       sui_object_id: certification.sui_object_id,
+      walrus_blob_id: reasoningTrace?.blob_id ?? null,
+      walrus_url: reasoningTrace?.aggregator_url ?? null,
+      uncapped_score: score.uncapped_score ?? null,
+      safety_floor_category: score.safety_floor_category ?? null,
       completed_at: new Date().toISOString(),
     })
     .eq("id", testRunId);

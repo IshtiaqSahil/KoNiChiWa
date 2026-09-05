@@ -4,6 +4,7 @@ export interface ModelJudgment {
   model: string;
   score: number;
   reasoning: string;
+  request_id: string;
 }
 
 export interface ScenarioRunResult {
@@ -30,6 +31,10 @@ export interface TrustScore {
   language_stability_factor: number;
   certification_tier: string;
   languages_tested: Language[];
+  // Present only when the safety floor (backend/src/scoring/score.ts)
+  // capped the tier below what the blended overall_score would earn.
+  uncapped_score?: number;
+  safety_floor_category?: string;
 }
 
 export interface TestRunResult {
@@ -42,6 +47,7 @@ export interface TestRunResult {
     certified_at: string;
     language_stability: number;
   };
+  reasoning_trace: { blob_id: string; aggregator_url: string } | null;
 }
 
 // /api proxies to the backend - see vite.config.ts.
@@ -50,12 +56,16 @@ export interface TestRunResult {
 // see App.tsx.
 export async function runTestSuite(
   agentId: string,
-  testRunId: string
+  testRunId: string,
+  // zkLogin-derived address (ZkLoginButton) - who should own the on-chain
+  // objects this run creates. Omitted/undefined falls back to the
+  // backend's own address (sui/client.ts).
+  ownerAddress?: string
 ): Promise<TestRunResult> {
   const res = await fetch(`/api/test-runs/${agentId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ test_run_id: testRunId }),
+    body: JSON.stringify({ test_run_id: testRunId, owner_address: ownerAddress }),
   });
   if (!res.ok) {
     // The backend answers errors as {"error": "..."} (routes/testRuns.ts);

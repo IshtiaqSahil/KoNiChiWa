@@ -62,11 +62,15 @@ interface Strings {
   judgesToggle: (n: number) => string;
   wrongLanguage: string;
   weakestLanguage: string;
+  requestIdLabel: string;
 
   certOnChain: string;
   certMock: string;
   explorer: string;
   certifiedAt: string;
+  walrusTrace: string;
+  walrusTraceLoading: string;
+  walrusTraceError: string;
 
   categoryNames: Record<string, string>;
   // Keyed by the canonical English tier label the backend returns
@@ -90,6 +94,11 @@ interface Strings {
   certificationsLink: string;
   certificationsIntro: string;
   certificationsEmpty: string;
+
+  zkLoginSignedIn: (shortAddress: string) => string;
+  zkLoginError: string;
+
+  safetyFloorNote: (category: string, cappedScore: number) => string;
 }
 
 const en: Strings = {
@@ -124,11 +133,15 @@ const en: Strings = {
   judgesToggle: (n) => `${n} model judgments`,
   wrongLanguage: "answered in the wrong language",
   weakestLanguage: "weakest language",
+  requestIdLabel: "Gonka request ID",
 
   certOnChain: "AgentCertification object",
   certMock: "Mock id — Sui write not configured (SUI_PACKAGE_ID / SUI_PUBLISHER_PRIVATE_KEY).",
   explorer: "View on Suiscan",
   certifiedAt: "Certified",
+  walrusTrace: "View full reasoning trace (Walrus)",
+  walrusTraceLoading: "Loading reasoning trace from Walrus…",
+  walrusTraceError: "Couldn't load — click to retry",
 
   categoryNames: {
     instruction_accuracy: "Instruction accuracy",
@@ -165,6 +178,12 @@ const en: Strings = {
   certificationsLink: "All certifications",
   certificationsIntro: "Every completed certification, most recent first — anyone can browse the full history.",
   certificationsEmpty: "No certifications yet — run a certification from the dashboard first.",
+
+  zkLoginSignedIn: (address) => `Certifying as ${address} (zkLogin)`,
+  zkLoginError: "zkLogin sign-in failed",
+
+  safetyFloorNote: (category, cappedScore) =>
+    `Safety floor applied: ${category} scored too low to certify above this tier, regardless of other categories — capped to ${cappedScore}.`,
 };
 
 const zh: Strings = {
@@ -199,11 +218,15 @@ const zh: Strings = {
   judgesToggle: (n) => `${n} 条模型评判`,
   wrongLanguage: "回复语言不符",
   weakestLanguage: "最薄弱语言",
+  requestIdLabel: "Gonka 请求 ID",
 
   certOnChain: "AgentCertification 对象",
   certMock: "模拟 ID — 未配置 Sui 写入（SUI_PACKAGE_ID / SUI_PUBLISHER_PRIVATE_KEY）。",
   explorer: "在 Suiscan 查看",
   certifiedAt: "认证时间",
+  walrusTrace: "查看完整推理记录（Walrus）",
+  walrusTraceLoading: "正在从 Walrus 加载推理记录…",
+  walrusTraceError: "加载失败 — 点击重试",
 
   categoryNames: {
     instruction_accuracy: "指令准确性",
@@ -240,6 +263,12 @@ const zh: Strings = {
   certificationsLink: "全部认证记录",
   certificationsIntro: "所有已完成的认证，按时间从新到旧排列 — 任何人都可以浏览完整历史记录。",
   certificationsEmpty: "暂无认证记录 — 请先在仪表盘运行一次认证。",
+
+  zkLoginSignedIn: (address) => `以 ${address} 身份认证（zkLogin）`,
+  zkLoginError: "zkLogin 登录失败",
+
+  safetyFloorNote: (category, cappedScore) =>
+    `已触发安全底线：${category} 得分过低，无论其他类别表现如何，认证等级都不能高于此档 — 已封顶为 ${cappedScore} 分。`,
 };
 
 const ja: Strings = {
@@ -274,11 +303,15 @@ const ja: Strings = {
   judgesToggle: (n) => `モデル評価 ${n} 件`,
   wrongLanguage: "異なる言語で応答",
   weakestLanguage: "最も弱い言語",
+  requestIdLabel: "Gonka リクエスト ID",
 
   certOnChain: "AgentCertification オブジェクト",
   certMock: "モック ID — Sui への書き込みが未設定です（SUI_PACKAGE_ID / SUI_PUBLISHER_PRIVATE_KEY）。",
   explorer: "Suiscan で表示",
   certifiedAt: "認証日時",
+  walrusTrace: "完全な推論記録を見る（Walrus）",
+  walrusTraceLoading: "Walrus から推論記録を読み込み中…",
+  walrusTraceError: "読み込みに失敗しました — クリックして再試行",
 
   categoryNames: {
     instruction_accuracy: "指示の正確さ",
@@ -315,6 +348,12 @@ const ja: Strings = {
   certificationsLink: "認証一覧",
   certificationsIntro: "完了したすべての認証を新しい順に表示します — 誰でも全履歴を閲覧できます。",
   certificationsEmpty: "まだ認証がありません — まずダッシュボードで認証を実行してください。",
+
+  zkLoginSignedIn: (address) => `${address} として認証中（zkLogin）`,
+  zkLoginError: "zkLogin サインインに失敗しました",
+
+  safetyFloorNote: (category, cappedScore) =>
+    `安全下限を適用：${category} のスコアが低すぎるため、他のカテゴリの結果に関わらずこの等級を上回って認証できません — ${cappedScore} 点に制限されました。`,
 };
 
 export const STRINGS: Record<Language, Strings> = { en, zh, ja };

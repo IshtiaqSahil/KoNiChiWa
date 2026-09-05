@@ -4,12 +4,15 @@ import {
   AgentInvokeResponse,
 } from "./types";
 
-// Was 20s; bumped to match the same lesson already learned tuning
-// gonka/router.ts's TIMEOUT_MS - real LLM inference calls (as opposed to
-// the near-instant regex demo agents) sometimes ran close to 28s this
-// session under provider load. A real LLM-backed agent (agents/llm-agent)
-// needs headroom to not get killed by this before it can even respond.
-const CALL_TIMEOUT_MS = 30_000;
+// Was 20s, then 30s (real LLM inference calls sometimes ran close to 28s
+// under provider load). Bumped again 2026-09-05: agents/llm-agent switched
+// its provider from OmniRoute (fails fast with a 429/502) to GonkaRouter
+// (confirmed live - fails slowly, via a ~25s timeout, not a fast error).
+// llm-agent's own retry-once-on-failure logic (throttle + CALL_TIMEOUT_MS,
+// twice in the worst case) can now genuinely take up to ~66s
+// (8s throttle + 25s call) x2 - the old 30s budget here killed the whole
+// request before llm-agent's own retry even got a chance to succeed.
+const CALL_TIMEOUT_MS = 75_000;
 
 export class AgentTimeoutError extends Error {
   constructor(agentName: string) {

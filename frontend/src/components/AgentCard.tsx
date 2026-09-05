@@ -5,6 +5,7 @@ import { tierClass, scoreColor } from "../scoreColor";
 import { ScoreBars, BarItem } from "./ScoreBars";
 import { ScenarioList, ScenarioRow } from "./ScenarioList";
 import { ScoreDial } from "./ScoreDial";
+import { ReasoningTraceViewer } from "./ReasoningTraceViewer";
 
 interface Props {
   agentId: string;
@@ -141,10 +142,17 @@ export function AgentCard({
               <p className="formula">{t.formula}</p>
               <p className="formula">
                 <b>{score.base_score}</b> × <b>{score.model_agreement_factor}</b> ×{" "}
-                <b>{score.language_stability_factor}</b> = <b>{score.overall_score}</b>
+                <b>{score.language_stability_factor}</b> ={" "}
+                <b>{score.uncapped_score ?? score.overall_score}</b>
               </p>
             </div>
           </div>
+
+          {score.safety_floor_category && (
+            <p className="safety-floor-note">
+              {t.safetyFloorNote(categoryLabel(t, score.safety_floor_category), score.overall_score)}
+            </p>
+          )}
 
           <div className="metrics">
             <div className="metric">
@@ -194,6 +202,7 @@ export function AgentCard({
             rows={rows}
             wrongLanguageLabel={t.wrongLanguage}
             judgesLabel={t.judgesToggle}
+            requestIdLabel={t.requestIdLabel}
           />
         </>
       )}
@@ -219,6 +228,17 @@ export function AgentCard({
           <p className="cert-id" style={{ margin: 0 }}>
             {t.certifiedAt}: {new Date(result.certification.certified_at).toLocaleString()}
           </p>
+          {result.reasoning_trace && (
+            <ReasoningTraceViewer
+              aggregatorUrl={result.reasoning_trace.aggregator_url}
+              viewLabel={t.walrusTrace}
+              loadingLabel={t.walrusTraceLoading}
+              errorLabel={t.walrusTraceError}
+              wrongLanguageLabel={t.wrongLanguage}
+              judgesLabel={t.judgesToggle}
+              requestIdLabel={t.requestIdLabel}
+            />
+          )}
           <p style={{ marginTop: "0.5rem", marginBottom: 0 }}>
             <button className="run-btn secondary" onClick={copyVerifyLink} type="button">
               {linkCopied ? t.linkCopied : t.copyLink}
