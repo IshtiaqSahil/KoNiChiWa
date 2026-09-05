@@ -1,4 +1,5 @@
 import { jwtToAddress } from "@mysten/sui/zklogin";
+import { API_BASE_URL } from "./api";
 
 // Google Identity Services (GIS) button flow - deliberately not the manual
 // OAuth redirect dance zkLogin tutorials usually show. That dance exists to
@@ -48,7 +49,7 @@ export function loadGoogleIdentityScript(): Promise<void> {
  * is what makes this trustworthy, not just a client-side computation.
  */
 export async function deriveZkLoginAddress(idToken: string): Promise<string> {
-  const res = await fetch("/api/zklogin/salt", {
+  const res = await fetch(`${API_BASE_URL}/zklogin/salt`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id_token: idToken }),

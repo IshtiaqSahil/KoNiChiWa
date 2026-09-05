@@ -14,6 +14,39 @@ What changed and why. Link files/PRs if useful.
 
 ---
 
+## 2026-09-05 — Add CORS + configurable API base URL for separately-deployed frontend (Claude)
+Frontend and backend are deploying as two separate Render services with
+different origins (backend already live at verity-wakk.onrender.com).
+Two things needed fixing before the frontend deploy would actually work
+against it:
+
+- `frontend/src/api.ts`, `zklogin.ts`, and `App.tsx` all called relative
+  `/api/...` paths, which only resolved via Vite's **dev-server-only**
+  proxy (`vite.config.ts`'s `server.proxy`) - that proxy doesn't exist in
+  the built static bundle, so every API call would have 404'd once the
+  frontend was deployed on its own origin.
+- The backend had no CORS handling at all, so even with the right URL,
+  the browser would have blocked the cross-origin response.
+
+Fixed: `api.ts` now exports `API_BASE_URL` from
+`import.meta.env.VITE_API_BASE_URL`, falling back to `/api` so local dev
+via the Vite proxy is unaffected; `zklogin.ts` and `App.tsx` both import
+and use it instead of hardcoding `/api`. Backend (`server.ts`) adds the
+`cors` package, reading a comma-separated allowlist from
+`FRONTEND_ORIGIN` - unset means cross-origin requests are rejected
+(fail-closed) rather than defaulting to allow-all. Verified both ends
+directly: built the backend and curled `/health` with an allowed vs. a
+disallowed `Origin` header (only the allowed one gets
+`Access-Control-Allow-Origin` back), and built the frontend with
+`VITE_API_BASE_URL` set vs. unset (confirmed the real URL gets baked
+into the bundle in the first case, `/api` in the second).
+
+**Env vars to set in Render once the frontend's URL is known:**
+- Backend service: `FRONTEND_ORIGIN=<frontend's deployed URL>` (comma-separate
+  if there's more than one, e.g. a preview and a production URL).
+- Frontend service (build-time, since Vite inlines it at build): `VITE_API_BASE_URL=https://verity-wakk.onrender.com`
+  (no trailing slash - it's prepended directly to `/test-runs/...` etc.).
+
 ## 2026-09-05 — Fix Render start crash: `--env-file` to `--env-file-if-exists` (Claude)
 After the previous two Render fixes (nodenext moduleResolution, `npm install`
 in the Build Command), the build succeeded but `start` crashed:

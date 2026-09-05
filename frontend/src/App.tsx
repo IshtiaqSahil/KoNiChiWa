@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  API_BASE_URL,
   Language,
   ModelJudgment,
   TestRunResult,
@@ -75,7 +76,7 @@ export default function App() {
   // (see backend/src/routes/testRuns.ts GET /suite).
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/suite")
+    fetch(`${API_BASE_URL}/suite`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then((body) => {
         if (!cancelled) setSuite(body.scenarios ?? []);

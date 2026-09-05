@@ -50,7 +50,11 @@ export interface TestRunResult {
   reasoning_trace: { blob_id: string; aggregator_url: string } | null;
 }
 
-// /api proxies to the backend - see vite.config.ts.
+// Local dev: "/api" proxies to the backend (see vite.config.ts). Deployed:
+// the frontend is a separate static site, so VITE_API_BASE_URL must point
+// at the backend's real origin (e.g. https://verity-wakk.onrender.com).
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+
 // test_run_id is generated here (not by the backend) so the caller can
 // subscribe to Supabase Realtime for this id *before* the run starts -
 // see App.tsx.
@@ -62,7 +66,7 @@ export async function runTestSuite(
   // backend's own address (sui/client.ts).
   ownerAddress?: string
 ): Promise<TestRunResult> {
-  const res = await fetch(`/api/test-runs/${agentId}`, {
+  const res = await fetch(`${API_BASE_URL}/test-runs/${agentId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ test_run_id: testRunId, owner_address: ownerAddress }),
