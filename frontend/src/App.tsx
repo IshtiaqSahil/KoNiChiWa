@@ -181,6 +181,7 @@ export default function App() {
       <header className="masthead">
         <div>
           <h1 className="wordmark">
+            <img src="/logo.png" alt="" className="logo-mark" />
             Verity<span>.</span>
           </h1>
           <p className="tagline">{t.tagline}</p>

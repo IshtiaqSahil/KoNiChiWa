@@ -1,3 +1,5 @@
+<img src="frontend/public/logo.png" alt="Verity logo" width="120" />
+
 # Verity — AI Agent Trust/Certification Platform
 
 Verity tests candidate AI agents (payment/DeFi agents, in this demo) for
