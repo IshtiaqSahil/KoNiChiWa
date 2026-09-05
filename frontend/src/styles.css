@@ -294,7 +294,25 @@ a.chip:hover { border-color: var(--border-strong); color: var(--text); }
    /verify/:id) rather than plain divs like the live scenario list - strip
    the default link styling so they read as list rows, not blue text. */
 a.cert-row { text-decoration: none; color: inherit; }
-a.cert-row:hover { background: var(--bg-inset); }
+/* .cert-list overrides the shared .scenarios container: unlike the
+   dashboard's scenario rows (which sit inside an opaque agent card),
+   these render directly on the page background, so a flat border-bottom
+   list read as invisible - same surface as the page behind it. Each row
+   gets its own card treatment instead. */
+.cert-list { border: none; border-radius: 0; overflow: visible; }
+.cert-list .cert-row {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.6rem;
+  box-shadow: var(--shadow-card);
+}
+.cert-list .cert-row:last-child { margin-bottom: 0; }
+a.cert-row:hover {
+  background: var(--bg-raised);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-card-hover);
+}
 .scenario-id { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-faint); }
 .scenario-msg { color: var(--text); margin: 0.15rem 0 0; word-break: break-word; }
 .scenario-reply { color: var(--text-dim); margin: 0.2rem 0 0; font-size: 0.8rem; word-break: break-word; }

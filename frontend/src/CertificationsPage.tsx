@@ -81,7 +81,7 @@ export function CertificationsPage() {
         (state.rows.length === 0 ? (
           <p>{t.certificationsEmpty}</p>
         ) : (
-          <div className="scenarios">
+          <div className="scenarios cert-list">
             {state.rows.map((row) => (
               <a key={row.id} href={`/verify/${row.id}`} className="scenario cert-row">
                 <div>
