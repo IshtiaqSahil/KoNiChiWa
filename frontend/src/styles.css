@@ -102,7 +102,15 @@ body.flat-bg { background: var(--bg); }
   border-radius: var(--radius-sm);
 }
 
-.shell { max-width: 1180px; margin: 0 auto; padding: 2.25rem 1.25rem 4rem; }
+/* position + z-index (not just DOM order) is what actually decides paint
+   order against ParticleBackground's fixed canvas: a position:fixed
+   element is always "positioned" and positioned content paints after
+   normal in-flow blocks regardless of where it sits in the DOM (CSS2.1
+   Appendix E) - caught live 2026-09-06 as sparkles rendering on top of the
+   agent cards despite the canvas being first in the document. Giving
+   .shell its own stacking context above z-index:auto settles it
+   unambiguously instead of relying on that ordering subtlety. */
+.shell { max-width: 1180px; margin: 0 auto; padding: 2.25rem 1.25rem 4rem; position: relative; z-index: 1; }
 
 /* --- header ---
    A compact product masthead rather than an editorial title block: the
