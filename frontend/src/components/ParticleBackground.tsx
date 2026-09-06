@@ -16,7 +16,7 @@ import { useEffect, useRef } from "react";
 // already puts this behind whatever renders after it.
 
 const SPARKLE_COLOR = "150, 190, 255"; // brighter/whiter-leaning blue than --accent, for visibility against the dark ground
-const SPARKLE_COUNT = 140;
+const SPARKLE_COUNT = 98; // 140 * 0.7, per feedback that 140 was too dense
 
 interface Sparkle {
   x: number;
